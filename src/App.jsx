@@ -1,24 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, MapPin, Wrench, AlertCircle, RefreshCw, Clock, Package } from 'lucide-react';
+import { Truck, MapPin, Wrench, AlertCircle, RefreshCw, Clock, Package, Gauge, Fuel } from 'lucide-react';
 
 const SHEET_ID = '1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE';
-const SHEET_NAME = 'status_operativo';
+const SHEET_STATUS = 'status_operativo';
+const SHEET_TELEMETRY = 'live_data';
 
 const ELAMDashboard = () => {
-  const [data, setData] = useState([]);
+  const [statusData, setStatusData] = useState([]);
+  const [telemetryData, setTelemetryData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [filter, setFilter] = useState('Todos');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchData = async () => {
+  const fetchSheet = async (sheetName) => {
     try {
-      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
       const response = await fetch(url);
       const text = await response.text();
       const json = JSON.parse(text.substr(47).slice(0, -2));
+      return json.table.rows;
+    } catch (error) {
+      console.error(`Error fetching ${sheetName}:`, error);
+      return [];
+    }
+  };
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
       
-      const rows = json.table.rows.map(row => ({
+      // Fetch status operativo
+      const statusRows = await fetchSheet(SHEET_STATUS);
+      const status = statusRows.map(row => ({
         unidad: row.c[0]?.v || '',
         actividad: row.c[1]?.v || '',
         ubicacion: row.c[2]?.v || '',
@@ -26,8 +40,24 @@ const ELAMDashboard = () => {
         operador: row.c[4]?.v || '',
         estatus: row.c[5]?.v || ''
       }));
-      
-      setData(rows);
+
+      // Fetch telemetry data
+      const telemetryRows = await fetchSheet(SHEET_TELEMETRY);
+      const telemetry = telemetryRows.map(row => ({
+        timestamp: row.c[0]?.v || '',
+        unidad: row.c[1]?.v || '',
+        lat: row.c[2]?.v || 0,
+        lng: row.c[3]?.v || 0,
+        velocidad: row.c[4]?.v || 0,
+        motorEstado: row.c[5]?.v || 'Desconocido',
+        combustible: row.c[6]?.v || 0,
+        odometro: row.c[7]?.v || 0,
+        evento: row.c[8]?.v || '',
+        ultimaActualizacion: row.c[9]?.v || ''
+      }));
+
+      setStatusData(status);
+      setTelemetryData(telemetry);
       setLastUpdate(new Date());
       setLoading(false);
     } catch (error) {
@@ -38,9 +68,24 @@ const ELAMDashboard = () => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 120000); // Actualiza cada 2 minutos
+    const interval = setInterval(fetchData, 120000);
     return () => clearInterval(interval);
   }, []);
+
+  // Merge status and telemetry data
+  const mergedData = statusData.map(status => {
+    const telemetry = telemetryData.find(t => {
+      // Normalizar nombres de unidades (T-01, T-001, etc.)
+      const statusUnit = status.unidad.replace(/^T-0*/, 'T-');
+      const telemetryUnit = t.unidad.replace(/^T-0*/, 'T-');
+      return statusUnit === telemetryUnit;
+    });
+    
+    return {
+      ...status,
+      telemetry: telemetry || null
+    };
+  });
 
   const getStatusColor = (status) => {
     const colors = {
@@ -66,20 +111,21 @@ const ELAMDashboard = () => {
   };
 
   const calculateKPIs = () => {
-    const total = data.length;
-    const enRuta = data.filter(u => u.estatus === 'En ruta').length;
-    const enTaller = data.filter(u => u.estatus === 'Taller' || u.estatus === 'Mantenimiento ligero').length;
-    const disponibles = data.filter(u => u.estatus === 'En puerto').length;
-    const descargando = data.filter(u => u.estatus === 'Descargando').length;
+    const total = statusData.length;
+    const enRuta = statusData.filter(u => u.estatus === 'En ruta').length;
+    const enTaller = statusData.filter(u => u.estatus === 'Taller' || u.estatus === 'Mantenimiento ligero').length;
+    const disponibles = statusData.filter(u => u.estatus === 'En puerto').length;
+    const descargando = statusData.filter(u => u.estatus === 'Descargando').length;
+    const enMovimiento = telemetryData.filter(t => t.velocidad > 0).length;
     
-    return { total, enRuta, enTaller, disponibles, descargando };
+    return { total, enRuta, enTaller, disponibles, descargando, enMovimiento };
   };
 
   const kpis = calculateKPIs();
 
-  const statusOptions = ['Todos', ...new Set(data.map(d => d.estatus))];
+  const statusOptions = ['Todos', ...new Set(statusData.map(d => d.estatus))];
 
-  const filteredData = data.filter(item => {
+  const filteredData = mergedData.filter(item => {
     const matchesFilter = filter === 'Todos' || item.estatus === filter;
     const matchesSearch = item.unidad.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.ubicacion.toLowerCase().includes(searchTerm.toLowerCase());
@@ -110,7 +156,7 @@ const ELAMDashboard = () => {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
         <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-xl">
           <div className="flex items-center justify-between mb-2">
             <Truck className="w-8 h-8 text-gray-400" />
@@ -125,6 +171,14 @@ const ELAMDashboard = () => {
           </div>
           <div className="text-3xl font-bold text-blue-400 mb-1">{kpis.enRuta}</div>
           <div className="text-sm text-gray-400">En Ruta</div>
+        </div>
+
+        <div className="bg-slate-800 rounded-xl p-6 border border-cyan-500/30 shadow-xl">
+          <div className="flex items-center justify-between mb-2">
+            <Gauge className="w-8 h-8 text-cyan-400" />
+          </div>
+          <div className="text-3xl font-bold text-cyan-400 mb-1">{kpis.enMovimiento}</div>
+          <div className="text-sm text-gray-400">En Movimiento</div>
         </div>
 
         <div className="bg-slate-800 rounded-xl p-6 border border-red-500/30 shadow-xl">
@@ -191,8 +245,8 @@ const ELAMDashboard = () => {
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Unidad</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Actividad</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Ubicación</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Telemetría</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Próximo Movimiento</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Operador</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Estatus</th>
               </tr>
             </thead>
@@ -214,6 +268,11 @@ const ELAMDashboard = () => {
                   <tr key={index} className="hover:bg-slate-700/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-semibold text-white">{item.unidad}</div>
+                      {item.telemetry && (
+                        <div className="text-xs text-gray-400 mt-1">
+                          📍 {item.telemetry.lat.toFixed(4)}, {item.telemetry.lng.toFixed(4)}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-gray-300">{item.actividad}</td>
                     <td className="px-6 py-4">
@@ -222,8 +281,26 @@ const ELAMDashboard = () => {
                         {item.ubicacion}
                       </div>
                     </td>
+                    <td className="px-6 py-4">
+                      {item.telemetry ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Gauge className="w-3 h-3 text-cyan-400" />
+                            <span className="text-gray-300">{item.telemetry.velocidad} km/h</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Fuel className="w-3 h-3 text-yellow-400" />
+                            <span className="text-gray-300">{item.telemetry.odometro.toFixed(0)} km</span>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {item.telemetry.evento}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 text-sm">Sin datos</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-gray-300">{item.proximoMovimiento}</td>
-                    <td className="px-6 py-4 text-gray-300">{item.operador || '-'}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-white text-sm ${getStatusColor(item.estatus)}`}>
                         {getStatusIcon(item.estatus)}
@@ -240,7 +317,8 @@ const ELAMDashboard = () => {
 
       {/* Footer */}
       <div className="mt-8 text-center text-gray-500 text-sm">
-        <p>Dashboard ELAM Logistics v1.0 | {filteredData.length} de {data.length} unidades mostradas</p>
+        <p>Dashboard ELAM Logistics v2.0 | {filteredData.length} de {statusData.length} unidades mostradas</p>
+        <p className="mt-1">Telemetría: {telemetryData.length} unidades con datos GPS</p>
       </div>
     </div>
   );
