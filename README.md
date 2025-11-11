@@ -137,29 +137,37 @@ python3 scripts/import_geocercas.py
 
 7. **Import n8n workflows:**
 - Go to n8n Cloud
-- Import workflows from `n8n_workflows/` directory
+- Import workflows from `workflows/` directory
 - Configure credentials
 - Activate workflows
 
-📖 **Full setup guide:** See [SETUP_GUIDE.md](SETUP_GUIDE.md)
+📖 **Full setup guide:** See [SETUP_GUIDE.md](docs/setup/SETUP_GUIDE.md)
 
 ---
 
 ## 📚 Documentation
 
-### Getting Started
-- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Complete installation instructions
-- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Deploy to production
-- **[GEOCERCAS_SYNC_GUIDE.md](GEOCERCAS_SYNC_GUIDE.md)** - Geofence import & updates
+### 🚀 Getting Started
+- **[Setup Guide](docs/setup/SETUP_GUIDE.md)** - Complete installation instructions
+- **[Deployment Guide](docs/setup/DEPLOYMENT_GUIDE.md)** - Deploy to production
 
-### Development
-- **[ELAM_Project_Documentation.md](ELAM_Project_Documentation.md)** - Full project documentation
-- **[N8N_SECURITY_GUIDE.md](N8N_SECURITY_GUIDE.md)** - Security best practices
-- **[FIXES_SUMMARY.md](FIXES_SUMMARY.md)** - Recent bug fixes and changes
+### 📖 Technical Guides
+- **[Geocercas Sync Guide](docs/guides/GEOCERCAS_SYNC_GUIDE.md)** - Geofence import & updates
+- **[Wialon Puerto Setup](docs/guides/WIALON_PUERTO_SETUP_GUIDE.md)** - Configure port notifications
+- **[n8n Security Guide](docs/guides/N8N_SECURITY_GUIDE.md)** - Security best practices
 
-### Workflow Documentation
-- **[n8n_workflows/QUICK_SETUP.md](n8n_workflows/QUICK_SETUP.md)** - n8n quick setup
-- **[n8n_workflows/GEOCERCAS_SYNC_README.md](n8n_workflows/GEOCERCAS_SYNC_README.md)** - Geofence workflow
+### ✅ Checklists
+- **[Puerto Notifications Checklist](docs/checklists/PUERTO_NOTIFICATIONS_CHECKLIST.md)** - Testing checklist
+- **[GitHub Upload Checklist](docs/checklists/GITHUB_UPLOAD_CHECKLIST.md)** - Pre-commit security checks
+
+### 📂 Project Documentation
+- **[Complete Project Docs](docs/project/ELAM_Project_Documentation.md)** - Full project documentation
+- **[Fixes Summary](docs/project/FIXES_SUMMARY.md)** - Recent bug fixes and changes
+- **[GitHub Preparation](docs/project/GITHUB_PREPARATION_SUMMARY.md)** - Repository setup notes
+
+### 🔧 Workflow Documentation
+- **[Workflow Quick Setup](workflows/QUICK_SETUP.md)** - n8n quick setup
+- **[Geocercas Sync README](workflows/GEOCERCAS_SYNC_README.md)** - Geofence workflow details
 
 ---
 
@@ -171,19 +179,30 @@ elam-dashboard/
 │   ├── App.jsx                 # Main React component
 │   └── main.jsx                # Entry point
 │
-├── scripts/
-│   ├── import_geocercas.py     # KML → Google Sheets importer
-│   └── test_kml_parsing.py     # KML parser tests
+├── docs/                       # 📚 All documentation
+│   ├── CLAUDE.md               # AI assistant context
+│   ├── setup/                  # Setup and deployment guides
+│   ├── guides/                 # Technical guides
+│   ├── checklists/             # Testing and validation
+│   ├── project/                # Project documentation
+│   └── sessions/               # Development session notes
 │
-├── n8n_workflows/              # Automation workflows
+├── workflows/                  # Automation workflows (n8n)
 │   ├── ELAM_-_Telegram_Listener_v2_COMPLETE.json  # Event handler
 │   ├── ELAM - Wialon to Sheets (cada 3h).json     # Telemetry sync
-│   └── ELAM - Complete Sync (Units + Geocercas).json
+│   ├── ELAM - Complete Sync (Units + Geocercas).json
+│   ├── QUICK_SETUP.md          # n8n quick setup
+│   └── GEOCERCAS_SYNC_README.md
+│
+├── scripts/                    # Python automation scripts
+│   ├── import_geocercas.py     # KML → Google Sheets importer
+│   └── test_kml_parsing.py     # KML parser tests
 │
 ├── templates/                  # CSV templates for data entry
 │   ├── template_geocercas_completo.csv
 │   ├── template_mantenimientos.csv
-│   └── ... (7 templates total)
+│   ├── wialon_puerto_notifications.csv
+│   └── ... (8 templates total)
 │
 ├── credentials/                # 🔒 NOT COMMITTED (gitignored)
 │   └── service-account.json    # Google Cloud credentials
@@ -272,7 +291,7 @@ The system uses 10 sheets:
 ### n8n Workflows
 
 1. Sign up for n8n Cloud (free tier)
-2. Import workflow JSONs from `n8n_workflows/`
+2. Import workflow JSONs from `workflows/`
 3. Configure Google Sheets credential
 4. Set environment variables (Sheet ID, Wialon token)
 5. Activate workflows

@@ -42,7 +42,7 @@ The system uses a single Google Sheets document with multiple sheets:
 2. **"ELAM - Telegram Listener v2"** - Webhook that receives real-time geofence entry/exit events from Wialon and updates status_operativo
 3. **"ELAM - Geocercas Sync"** - Syncs geofence definitions from Wialon to Google Sheets every 6 hours
 
-All workflow JSON files are in `n8n_workflows/` directory.
+All workflow JSON files are in `workflows/` directory.
 
 ### React Dashboard Architecture
 
@@ -145,7 +145,7 @@ npm run lint:fix && npm run format
 
 ## Security Guidelines
 
-**Critical**: Follow `N8N_SECURITY_GUIDE.md` for n8n workflow credentials.
+**Critical**: Follow `docs/guides/N8N_SECURITY_GUIDE.md` for n8n workflow credentials.
 
 - Store Wialon API tokens in n8n Credentials Manager (never hardcode)
 - Use environment variables for all configuration
@@ -195,21 +195,44 @@ See `ELAM_Project_Documentation.md` for complete project status and roadmap.
 
 ```
 elam-dashboard/
+├── README.md            # Main project documentation
+├── package.json         # Dependencies and scripts
+├── vite.config.js       # Vite configuration (React plugin)
+├── .env.example         # Environment variable template
+├── index.html           # Loads Tailwind CSS via CDN
 ├── src/
 │   ├── App.jsx          # Main dashboard component (single component app)
 │   └── main.jsx         # React entry point
-├── n8n_workflows/       # n8n workflow JSON exports
+├── docs/                # 📚 All documentation
+│   ├── CLAUDE.md        # AI assistant context
+│   ├── setup/           # Setup and deployment guides
+│   │   ├── SETUP_GUIDE.md
+│   │   └── DEPLOYMENT_GUIDE.md
+│   ├── guides/          # Technical guides
+│   │   ├── GEOCERCAS_SYNC_GUIDE.md
+│   │   ├── N8N_SECURITY_GUIDE.md
+│   │   └── WIALON_PUERTO_SETUP_GUIDE.md
+│   ├── checklists/      # Testing and validation checklists
+│   │   ├── PUERTO_NOTIFICATIONS_CHECKLIST.md
+│   │   └── GITHUB_UPLOAD_CHECKLIST.md
+│   ├── project/         # Project documentation
+│   │   ├── ELAM_Project_Documentation.md
+│   │   ├── FIXES_SUMMARY.md
+│   │   └── GITHUB_PREPARATION_SUMMARY.md
+│   └── sessions/        # Development session summaries
+│       └── SESSION_SUMMARY_2025-11-11.md
+├── workflows/           # n8n workflow JSON exports
 │   ├── ELAM - Wialon to Sheets (cada 3h).json
+│   ├── ELAM_-_Telegram_Listener_v2_COMPLETE.json
 │   ├── ELAM_-_Telegram_Listener_v2_FIXED.json
 │   ├── sync_geocercas_workflow.json
 │   └── GEOCERCAS_SYNC_README.md
+├── scripts/             # Python automation scripts
+│   ├── import_geocercas.py
+│   └── test_kml_parsing.py
 ├── templates/           # CSV templates for Google Sheets
-├── csv/                 # CSV data files
-├── index.html           # Loads Tailwind CSS via CDN
-├── vite.config.js       # Vite configuration (React plugin)
-├── package.json         # Dependencies and scripts
-├── .env.example         # Environment variable template
-└── Documentation files  # ELAM_Project_Documentation.md, SETUP_GUIDE.md, etc.
+│   └── wialon_puerto_notifications.csv
+└── csv/                 # CSV data files
 ```
 
 ## Making Changes
@@ -229,7 +252,7 @@ elam-dashboard/
 1. Create workflow in n8n Cloud
 2. Test thoroughly with manual execution
 3. Export workflow JSON (credentials are automatically excluded)
-4. Save to `n8n_workflows/` with descriptive name
+4. Save to `workflows/` with descriptive name
 5. Document in workflow README if complex
 
 ### Updating geofences
@@ -281,6 +304,7 @@ Full Wialon API docs: https://sdk.wialon.com/wiki/en/
 
 - `src/App.jsx` - All dashboard logic
 - `.env` - Configuration (never commit)
-- `n8n_workflows/*.json` - Automation workflows
-- `ELAM_Project_Documentation.md` - Complete project context
-- `SETUP_GUIDE.md` - Setup and security instructions
+- `workflows/*.json` - Automation workflows
+- `docs/project/ELAM_Project_Documentation.md` - Complete project context
+- `docs/setup/SETUP_GUIDE.md` - Setup and security instructions
+- `docs/CLAUDE.md` - AI assistant context (this file)
