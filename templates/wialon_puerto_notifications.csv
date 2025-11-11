@@ -1,0 +1,129 @@
+Name;Control type;Parameters;Actions;Text;Description
+Entrada_ASLA_LZC;Inside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""entrada_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad entrando al puerto ASLA LZC
+Salida_ASLA_LZC;Outside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""salida_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad saliendo del puerto ASLA LZC
+Entrada_ADUANA_LZC;Inside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""entrada_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad entrando al puerto ADUANA LZC
+Salida_ADUANA_LZC;Outside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""salida_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad saliendo del puerto ADUANA LZC
+Entrada_AUDITORIA_LZC;Inside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""entrada_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad entrando al puerto AUDITORIA LZC
+Salida_AUDITORIA_LZC;Outside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""salida_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad saliendo del puerto AUDITORIA LZC
+Entrada_APM_TERMINALS_LZC;Inside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""entrada_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad entrando al puerto APM TERMINALS LZC
+Salida_APM_TERMINALS_LZC;Outside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""salida_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad saliendo del puerto APM TERMINALS LZC
+Entrada_HUTCHISON_PORT_LZC;Inside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""entrada_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad entrando al puerto HUTCHISON PORT LZC
+Salida_HUTCHISON_PORT_LZC;Outside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""salida_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad saliendo del puerto HUTCHISON PORT LZC
+Entrada_MKS_LZC;Inside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""entrada_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad entrando al puerto MKS LZC
+Salida_MKS_LZC;Outside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""salida_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad saliendo del puerto MKS LZC
+Entrada_BLVD_AEROPUERTO_MIGUEL_ALEMAN;Inside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""entrada_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad entrando al puerto BLVD. AEROPUERTO MIGUEL ALEMÁN
+Salida_BLVD_AEROPUERTO_MIGUEL_ALEMAN;Outside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""salida_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad saliendo del puerto BLVD. AEROPUERTO MIGUEL ALEMÁN
+Entrada_COMPLEJO_PORTUARIO_LZC;Inside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""entrada_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad entrando al COMPLEJO PORTUARIO LZC
+Salida_COMPLEJO_PORTUARIO_LZC;Outside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""salida_puerto"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad saliendo del COMPLEJO PORTUARIO LZC
