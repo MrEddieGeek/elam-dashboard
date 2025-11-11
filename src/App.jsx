@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Truck, MapPin, Wrench, AlertCircle, RefreshCw, Clock, Package, Activity } from 'lucide-react';
 
-const SHEET_ID = '1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE';
+// Configuration constants
+const SHEET_ID = import.meta.env.VITE_GOOGLE_SHEET_ID || '1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE';
 const SHEET_NAME = 'status_operativo';
+const UPDATE_INTERVAL = parseInt(import.meta.env.VITE_UPDATE_INTERVAL) || 120000; // 2 minutes default
+const GOOGLE_SHEETS_JSON_PREFIX = '/*O_o*/\ngoogle.visualization.Query.setResponse(';
 
 const ELAMDashboard = () => {
   const [data, setData] = useState([]);
@@ -10,14 +13,42 @@ const ELAMDashboard = () => {
   const [lastUpdate, setLastUpdate] = useState(null);
   const [filter, setFilter] = useState('Todos');
   const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState(null);
 
   const fetchData = async () => {
     try {
+      setError(null);
       const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
       const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const text = await response.text();
-      const json = JSON.parse(text.substr(47).slice(0, -2));
-      
+
+      // More robust parsing - handle Google's JSON wrapper format
+      let jsonText = text;
+      if (text.startsWith(GOOGLE_SHEETS_JSON_PREFIX)) {
+        // Remove the wrapper: /*O_o*/\ngoogle.visualization.Query.setResponse( ... );
+        jsonText = text.substring(GOOGLE_SHEETS_JSON_PREFIX.length);
+        jsonText = jsonText.substring(0, jsonText.lastIndexOf(');'));
+      } else if (text.includes('google.visualization.Query.setResponse(')) {
+        // Fallback for slight format variations
+        const startIdx = text.indexOf('({');
+        const endIdx = text.lastIndexOf('});');
+        if (startIdx !== -1 && endIdx !== -1) {
+          jsonText = text.substring(startIdx + 1, endIdx + 1);
+        }
+      }
+
+      const json = JSON.parse(jsonText);
+
+      // Validate response structure
+      if (!json.table || !json.table.rows) {
+        throw new Error('Invalid data structure received from Google Sheets');
+      }
+
       const rows = json.table.rows.map(row => ({
         unidad: row.c[0]?.v || '',
         actividad: row.c[1]?.v || '',
@@ -26,20 +57,21 @@ const ELAMDashboard = () => {
         operador: row.c[4]?.v || '',
         estatus: row.c[5]?.v || '',
         ultimaActualizacion: row.c[6]?.v || ''
-      })).filter(row => row.unidad); // Filtrar filas vacías
-      
+      })).filter(row => row.unidad); // Filter empty rows
+
       setData(rows);
       setLastUpdate(new Date());
       setLoading(false);
     } catch (error) {
       console.error('Error fetching data:', error);
+      setError(`Error al cargar datos: ${error.message}`);
       setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 120000); // Actualiza cada 2 minutos
+    const interval = setInterval(fetchData, UPDATE_INTERVAL);
     return () => clearInterval(interval);
   }, []);
 
@@ -101,6 +133,24 @@ const ELAMDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 md:p-8">
+      {/* Error Notification */}
+      {error && (
+        <div className="mb-4 bg-red-900/50 border border-red-500 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="font-semibold text-red-200 mb-1">Error al cargar datos</h3>
+            <p className="text-red-300 text-sm">{error}</p>
+          </div>
+          <button
+            onClick={() => setError(null)}
+            className="text-red-400 hover:text-red-300 transition-colors"
+            aria-label="Cerrar notificación"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
@@ -111,6 +161,7 @@ const ELAMDashboard = () => {
           <button
             onClick={fetchData}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            disabled={loading}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Actualizar
