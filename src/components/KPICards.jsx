@@ -51,54 +51,54 @@ export function KPICards({ data = [], lastUpdate }) {
       value: total,
       subtitle: `${disponibles} disponibles`,
       icon: Truck,
-      color: 'text-slate-600',
-      bgColor: 'bg-slate-100',
-      borderColor: 'border-slate-200',
+      color: 'text-slate-300',
+      bgColor: 'bg-slate-800/50',
+      borderColor: 'border-slate-600',
     },
     {
       title: 'En Ruta',
       value: enRuta,
       subtitle: `${((enRuta / total) * 100).toFixed(0)}% del total`,
       icon: MapPin,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200',
+      color: 'text-blue-400',
+      bgColor: 'bg-blue-950/50',
+      borderColor: 'border-blue-700',
     },
     {
       title: 'Taller/Mantenimiento',
       value: enTaller + enMantenimiento,
       subtitle: `${enTaller} taller, ${enMantenimiento} mantenimiento`,
       icon: Wrench,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-200',
+      color: 'text-red-400',
+      bgColor: 'bg-red-950/50',
+      borderColor: 'border-red-700',
     },
     {
       title: 'Disponibles',
       value: disponibles,
       subtitle: 'Listas para asignar',
       icon: Package,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      borderColor: 'border-green-200',
+      color: 'text-green-400',
+      bgColor: 'bg-green-950/50',
+      borderColor: 'border-green-700',
     },
     {
       title: 'En Operación',
       value: descargando + esperandoCarga,
       subtitle: `${descargando} descargando, ${esperandoCarga} esperando`,
       icon: Package,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
-      borderColor: 'border-orange-200',
+      color: 'text-orange-400',
+      bgColor: 'bg-orange-950/50',
+      borderColor: 'border-orange-700',
     },
     {
       title: 'Último Evento',
       value: ultimoEvento?.unidad || '--',
       subtitle: ultimoEvento?.ubicacion ? ultimoEvento.ubicacion.substring(0, 30) + '...' : 'Sin datos',
       icon: Clock,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      borderColor: 'border-purple-200',
+      color: 'text-purple-400',
+      bgColor: 'bg-purple-950/50',
+      borderColor: 'border-purple-700',
       isText: true,
     },
   ];
@@ -130,11 +130,11 @@ function KPICard({
       transition={{ duration: 0.3, delay: index * 0.05 }}
     >
       <Card className={cn(
-        'hover:shadow-md transition-shadow duration-300 border-l-4',
+        'hover:shadow-md transition-shadow duration-300 border-l-4 bg-slate-900/50 border-slate-700',
         borderColor
       )}>
         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-          <CardTitle className="text-sm font-medium text-gray-600">
+          <CardTitle className="text-sm font-medium text-slate-300">
             {title}
           </CardTitle>
           <div className={cn('p-2 rounded-full', bgColor)}>
@@ -160,7 +160,7 @@ function KPICard({
               </motion.span>
             )}
           </div>
-          <p className="text-xs text-gray-500 truncate">{subtitle}</p>
+          <p className="text-xs text-slate-400 truncate">{subtitle}</p>
         </CardContent>
       </Card>
     </motion.div>

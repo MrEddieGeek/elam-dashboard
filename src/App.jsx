@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, MapPin, Wrench, AlertCircle, RefreshCw, Clock, Package, Activity } from 'lucide-react';
+import { Truck, RefreshCw, Clock, AlertCircle, LayoutGrid, Table as TableIcon } from 'lucide-react';
+import { KPICards } from '@/components/KPICards';
+import { UnitsGrid } from '@/components/UnitsGrid';
+import { UnitsTable } from '@/components/UnitsTable';
+import { ExportButton } from '@/components/ExportButton';
+import { Button } from '@/components/ui/button';
 
 // Configuration constants
 const SHEET_ID = import.meta.env.VITE_GOOGLE_SHEET_ID || '1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE';
@@ -14,6 +19,7 @@ const ELAMDashboard = () => {
   const [filter, setFilter] = useState('Todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState(null);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
 
   const fetchData = async () => {
     try {
@@ -75,59 +81,15 @@ const ELAMDashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const getStatusColor = (status) => {
-    const statusLower = status.toLowerCase();
-    
-    if (statusLower.includes('ruta')) return 'bg-blue-500';
-    if (statusLower.includes('puerto')) return 'bg-green-500';
-    if (statusLower.includes('mantenimiento')) return 'bg-yellow-500';
-    if (statusLower.includes('descargando') || statusLower.includes('descarga')) return 'bg-orange-500';
-    if (statusLower.includes('esperando')) return 'bg-amber-500';
-    if (statusLower.includes('descanso')) return 'bg-gray-500';
-    if (statusLower.includes('taller')) return 'bg-red-500';
-    
-    return 'bg-gray-400';
-  };
-
-  const getStatusIcon = (status) => {
-    const statusLower = status.toLowerCase();
-    
-    if (statusLower.includes('ruta')) return <Truck className="w-5 h-5" />;
-    if (statusLower.includes('taller') || statusLower.includes('mantenimiento')) return <Wrench className="w-5 h-5" />;
-    if (statusLower.includes('puerto') || statusLower.includes('esperando')) return <Package className="w-5 h-5" />;
-    if (statusLower.includes('descargando') || statusLower.includes('descarga')) return <Activity className="w-5 h-5" />;
-    if (statusLower.includes('descanso')) return <Clock className="w-5 h-5" />;
-    
-    return <MapPin className="w-5 h-5" />;
-  };
-
-  const calculateKPIs = () => {
-    const total = data.length;
-    const enRuta = data.filter(u => u.estatus.toLowerCase().includes('ruta')).length;
-    const enTaller = data.filter(u => 
-      u.estatus.toLowerCase().includes('taller') || 
-      u.estatus.toLowerCase().includes('mantenimiento')
-    ).length;
-    const disponibles = data.filter(u => u.estatus.toLowerCase().includes('puerto')).length;
-    const descargando = data.filter(u => 
-      u.estatus.toLowerCase().includes('descargando') ||
-      u.estatus.toLowerCase().includes('descarga')
-    ).length;
-    const esperandoCarga = data.filter(u => u.estatus.toLowerCase().includes('esperando')).length;
-    
-    return { total, enRuta, enTaller, disponibles, descargando, esperandoCarga };
-  };
-
-  const kpis = calculateKPIs();
-
   const statusOptions = ['Todos', ...new Set(data.map(d => d.estatus).filter(s => s))];
 
   const filteredData = data.filter(item => {
     const matchesFilter = filter === 'Todos' || item.estatus === filter;
-    const matchesSearch = 
+    const matchesSearch =
       item.unidad.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.ubicacion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.actividad.toLowerCase().includes(searchTerm.toLowerCase());
+      item.actividad.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.operador && item.operador.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesFilter && matchesSearch;
   });
 
@@ -153,167 +115,129 @@ const ELAMDashboard = () => {
 
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl md:text-4xl font-bold text-white flex items-center gap-3">
-            <Truck className="w-10 h-10 text-blue-400" />
-            ELAM Logistics
-          </h1>
-          <button
-            onClick={fetchData}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            disabled={loading}
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Actualizar
-          </button>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-blue-950/50 rounded-xl border border-blue-800">
+              <Truck className="w-8 h-8 text-blue-400" />
+            </div>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-white">
+                ELAM Logistics
+              </h1>
+              <p className="text-slate-400 text-sm">Sistema de Gestión de Flota</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <ExportButton data={filteredData} filename="ELAM_Dashboard" />
+            <button
+              onClick={fetchData}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Actualizar
+            </button>
+          </div>
         </div>
-        <p className="text-gray-400 flex items-center gap-2">
+
+        <p className="text-slate-400 flex items-center gap-2 text-sm">
           <Clock className="w-4 h-4" />
           Última actualización: {lastUpdate ? lastUpdate.toLocaleTimeString('es-MX') : 'Cargando...'}
         </p>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
-        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-xl">
-          <div className="flex items-center justify-between mb-2">
-            <Truck className="w-8 h-8 text-gray-400" />
-          </div>
-          <div className="text-3xl font-bold text-white mb-1">{kpis.total}</div>
-          <div className="text-sm text-gray-400">Total Unidades</div>
-        </div>
+      {/* KPI Cards */}
+      {!loading && <KPICards data={data} lastUpdate={lastUpdate} />}
 
-        <div className="bg-slate-800 rounded-xl p-6 border border-blue-500/30 shadow-xl">
-          <div className="flex items-center justify-between mb-2">
-            <Truck className="w-8 h-8 text-blue-400" />
-          </div>
-          <div className="text-3xl font-bold text-blue-400 mb-1">{kpis.enRuta}</div>
-          <div className="text-sm text-gray-400">En Ruta</div>
-        </div>
-
-        <div className="bg-slate-800 rounded-xl p-6 border border-red-500/30 shadow-xl">
-          <div className="flex items-center justify-between mb-2">
-            <Wrench className="w-8 h-8 text-red-400" />
-          </div>
-          <div className="text-3xl font-bold text-red-400 mb-1">{kpis.enTaller}</div>
-          <div className="text-sm text-gray-400">En Taller</div>
-        </div>
-
-        <div className="bg-slate-800 rounded-xl p-6 border border-green-500/30 shadow-xl">
-          <div className="flex items-center justify-between mb-2">
-            <Package className="w-8 h-8 text-green-400" />
-          </div>
-          <div className="text-3xl font-bold text-green-400 mb-1">{kpis.disponibles}</div>
-          <div className="text-sm text-gray-400">En Puerto</div>
-        </div>
-
-        <div className="bg-slate-800 rounded-xl p-6 border border-orange-500/30 shadow-xl">
-          <div className="flex items-center justify-between mb-2">
-            <Activity className="w-8 h-8 text-orange-400" />
-          </div>
-          <div className="text-3xl font-bold text-orange-400 mb-1">{kpis.descargando}</div>
-          <div className="text-sm text-gray-400">Descargando</div>
-        </div>
-
-        <div className="bg-slate-800 rounded-xl p-6 border border-amber-500/30 shadow-xl">
-          <div className="flex items-center justify-between mb-2">
-            <Package className="w-8 h-8 text-amber-400" />
-          </div>
-          <div className="text-3xl font-bold text-amber-400 mb-1">{kpis.esperandoCarga}</div>
-          <div className="text-sm text-gray-400">Esperando Carga</div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-slate-800 rounded-xl p-6 mb-6 border border-slate-700 shadow-xl">
-        <div className="flex flex-col md:flex-row gap-4">
+      {/* Filters and View Toggle */}
+      <div className="bg-slate-900/50 rounded-xl p-6 mb-6 border border-slate-700 shadow-xl">
+        <div className="flex flex-col gap-4">
+          {/* Search Bar */}
           <div className="flex-1">
             <input
               type="text"
-              placeholder="Buscar por unidad, ubicación o actividad..."
+              placeholder="Buscar por unidad, ubicación, actividad u operador..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600"
             />
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {statusOptions.map(status => (
-              <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
-                  filter === status
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
-                }`}
+
+          {/* Filters and View Toggle */}
+          <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+            {/* Status Filters */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {statusOptions.map(status => (
+                <button
+                  key={status}
+                  onClick={() => setFilter(status)}
+                  className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors text-sm font-medium ${
+                    filter === status
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+
+            {/* View Toggle */}
+            <div className="flex gap-2 bg-slate-800/50 p-1 rounded-lg border border-slate-700">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="gap-2"
               >
-                {status}
-              </button>
-            ))}
+                <LayoutGrid className="h-4 w-4" />
+                Tarjetas
+              </Button>
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+                className="gap-2"
+              >
+                <TableIcon className="h-4 w-4" />
+                Tabla
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-900">
-              <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Unidad</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Actividad</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Ubicación</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Próximo Movimiento</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Operador</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Estatus</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700">
-              {loading ? (
-                <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-gray-400">
-                    Cargando datos...
-                  </td>
-                </tr>
-              ) : filteredData.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-gray-400">
-                    No se encontraron resultados
-                  </td>
-                </tr>
-              ) : (
-                filteredData.map((item, index) => (
-                  <tr key={index} className="hover:bg-slate-700/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-white">{item.unidad}</div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">{item.actividad}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-gray-300">
-                        <MapPin className="w-4 h-4 text-blue-400" />
-                        {item.ubicacion}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">{item.proximoMovimiento}</td>
-                    <td className="px-6 py-4 text-gray-300">{item.operador || '-'}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-white text-sm ${getStatusColor(item.estatus)}`}>
-                        {getStatusIcon(item.estatus)}
-                        {item.estatus}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {/* Loading State */}
+      {loading ? (
+        <div className="text-center py-12 text-slate-400">
+          <RefreshCw className="w-12 h-12 mx-auto mb-4 animate-spin text-blue-400" />
+          <p>Cargando datos...</p>
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Data Display - Grid or Table */}
+          {viewMode === 'grid' ? (
+            <UnitsGrid data={filteredData} />
+          ) : (
+            <UnitsTable data={filteredData} />
+          )}
+
+          {/* Results Counter */}
+          {filteredData.length === 0 && !loading && (
+            <div className="text-center py-12 text-slate-400">
+              <p className="text-lg mb-2">No se encontraron resultados</p>
+              <p className="text-sm">Intenta ajustar los filtros o el término de búsqueda</p>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Footer */}
-      <div className="mt-8 text-center text-gray-500 text-sm">
-        <p>Dashboard ELAM Logistics v2.0 | {filteredData.length} de {data.length} unidades mostradas</p>
-        <p className="mt-1">Sistema de actualización automática activo ✅</p>
+      <div className="mt-8 text-center text-slate-500 text-sm space-y-1">
+        <p className="font-medium">Dashboard ELAM Logistics v2.0</p>
+        <p>{filteredData.length} de {data.length} unidades mostradas</p>
+        <p className="text-xs">Sistema de actualización automática activo ✅</p>
       </div>
     </div>
   );
