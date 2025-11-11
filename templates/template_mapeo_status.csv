@@ -1,0 +1,13 @@
+geocerca_tipo,evento,condicion,status_resultado,actividad_resultado,prioridad,activo
+taller,entrada,,En Taller,Mantenimiento,1,SI
+taller,salida,!viaje_programado,Disponible,Esperando asignación,2,SI
+taller,salida,viaje_programado,En Ruta,Tránsito,2,SI
+cliente,entrada,,Descargando,Entrega en curso,3,SI
+cliente,entrada,tiempo_detenido>30,Descargando,Descarga confirmada,3,SI
+cliente,salida,,En Ruta,Tránsito,4,SI
+caseta,entrada,,En Ruta,Tránsito autopista,5,SI
+caseta,salida,,En Ruta,Tránsito,5,SI
+ruta,entrada,,En Ruta,Siguiendo ruta,3,SI
+ruta,salida,,Alerta,Desvío de ruta,1,SI
+otro,entrada,,En Ruta,Verificar ubicación,4,SI
+otro,salida,,En Ruta,Tránsito,5,SI

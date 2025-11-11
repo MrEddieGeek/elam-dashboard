@@ -1,0 +1,410 @@
+{
+  "name": "ELAM - Complete Sync (Units + Geocercas)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 3
+            }
+          ]
+        }
+      },
+      "name": "Cada 3 horas",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [80, 200],
+      "id": "schedule-trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://hst-api.wialon.com/wialon/ajax.html",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "svc",
+              "value": "token/login"
+            },
+            {
+              "name": "params",
+              "value": "{\"token\":\"5b30e77bacbf13e8d2258fa3f9bf68ad99CBD5C51C552EA1CE515F932F118F6D2A4AD491\"}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Login Wialon",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [300, 200],
+      "id": "login-wialon"
+    },
+    {
+      "parameters": {
+        "url": "https://hst-api.wialon.com/wialon/ajax.html",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "svc",
+              "value": "core/search_items"
+            },
+            {
+              "name": "params",
+              "value": "={\"spec\":{\"itemsType\":\"avl_unit\",\"propName\":\"sys_name\",\"propValueMask\":\"*\",\"sortType\":\"sys_name\"},\"force\":1,\"flags\":1025,\"from\":0,\"to\":0}"
+            },
+            {
+              "name": "sid",
+              "value": "={{$json.eid}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Obtener Unidades",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [520, 100],
+      "id": "get-units"
+    },
+    {
+      "parameters": {
+        "url": "https://hst-api.wialon.com/wialon/ajax.html",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "svc",
+              "value": "core/search_items"
+            },
+            {
+              "name": "params",
+              "value": "={\"spec\":{\"itemsType\":\"avl_resource\",\"propName\":\"*\",\"propValueMask\":\"*\",\"sortType\":\"sys_name\"},\"force\":1,\"flags\":1,\"from\":0,\"to\":0}"
+            },
+            {
+              "name": "sid",
+              "value": "={{$('Login Wialon').first().json.eid}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Buscar Recursos (Geocercas)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [520, 300],
+      "id": "search-resources"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "name": "Split Unidades",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [740, 100],
+      "id": "split-units"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "name": "Split Recursos",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [740, 300],
+      "id": "split-resources"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Procesar datos de cada unidad con detección mejorada de motor\nconst item = $input.item.json;\n\n// Extraer datos relevantes\nconst unidad = item.nm || 'Desconocido';\nconst pos = item.pos || {};\nconst params = pos.p || {};\n\n// Timestamp actual\nconst timestamp = new Date().toISOString();\nconst ultimaActualizacion = pos.t ? new Date(pos.t * 1000).toISOString() : timestamp;\n\n// DETECCIÓN DE ESTADO DEL MOTOR POR INFERENCIA\nlet motorEstado = 'Desconocido';\nconst velocidad = pos.s || 0;\nconst ultimoReporte = pos.t || 0;\nconst tiempoDesdeReporte = Date.now() / 1000 - ultimoReporte; // en segundos\n\n// Método 1: Revisar parámetros directos si existen\nif (params.hasOwnProperty('pwr') || params.hasOwnProperty('power')) {\n  motorEstado = (params.pwr || params.power) > 0 ? 'Encendido' : 'Apagado';\n}\nelse if (params.hasOwnProperty('ign') || params.hasOwnProperty('ignition')) {\n  motorEstado = (params.ign || params.ignition) === 1 ? 'Encendido' : 'Apagado';\n}\nelse if (params.hasOwnProperty('engine_state')) {\n  motorEstado = params.engine_state === 1 ? 'Encendido' : 'Apagado';\n}\n// Método 2: INFERENCIA por velocidad y comportamiento\nelse {\n  if (velocidad > 5) {\n    motorEstado = 'Encendido';\n  } else if (velocidad > 0 && velocidad <= 5) {\n    motorEstado = 'Encendido';\n  } else if (velocidad === 0 && tiempoDesdeReporte < 1800) {\n    motorEstado = 'Apagado';\n  } else {\n    motorEstado = 'Apagado';\n  }\n}\n\n// Determinar evento basado en velocidad y estado\nlet evento = 'Normal';\nif (pos.s >= 5) {\n  evento = 'En movimiento';\n} else if (motorEstado === 'Encendido' && pos.s < 5) {\n  evento = 'Ralentí';\n} else if (motorEstado === 'Apagado') {\n  evento = 'Detenido';\n} else {\n  evento = 'Estacionado';\n}\n\nreturn {\n  timestamp: timestamp,\n  unidad: unidad,\n  lat: pos.y || 0,\n  lng: pos.x || 0,\n  velocidad_kmh: pos.s || 0,\n  motor_estado: motorEstado,\n  combustible_litros: params.fuel_level || params.fuel || 0,\n  odometro_km: params.mileage || params.total_mileage || 0,\n  evento: evento,\n  ultima_actualizacion: ultimaActualizacion\n};"
+      },
+      "name": "Procesar Datos Unidades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 100],
+      "id": "process-units"
+    },
+    {
+      "parameters": {
+        "url": "https://hst-api.wialon.com/wialon/ajax.html",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "svc",
+              "value": "resource/get_zone_data"
+            },
+            {
+              "name": "params",
+              "value": "={\"itemId\":{{$json.id}},\"flags\":1}"
+            },
+            {
+              "name": "sid",
+              "value": "={{$('Login Wialon').first().json.eid}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Obtener Geocercas del Recurso",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [960, 300],
+      "id": "get-geofences"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "live_data",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{$json.timestamp}}",
+            "unidad": "={{$json.unidad}}",
+            "lat": "={{$json.lat}}",
+            "velocidad_kmh": "={{$json.velocidad_kmh}}",
+            "motor_estado": "={{$json.motor_estado}}",
+            "combustible_litros": "={{$json.combustible_litros}}",
+            "odometro_km": "={{$json.odometro_km}}",
+            "evento": "={{$json.evento}}",
+            "lng": "={{$json.lng}}"
+          },
+          "matchingColumns": ["unidad"]
+        },
+        "options": {}
+      },
+      "name": "Actualizar Live Data",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1180, 100],
+      "id": "update-live-data",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Yv3IPJWrDIRUALZ",
+          "name": "ELAM_Google_Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Extract and transform geofence data from Wialon to Google Sheets format\nconst item = $input.item.json;\nconst items = [];\n\n// Get the geofences from the response\nconst geofences = Array.isArray(item) ? item : (item.zones || []);\n\nif (geofences && geofences.length > 0) {\n  for (const geofence of geofences) {\n    // Determine geofence type based on name\n    let tipo = 'otro';\n    const nombreLower = (geofence.n || '').toLowerCase();\n    \n    if (nombreLower.includes('taller') || nombreLower.includes('faw') || nombreLower.includes('elam')) {\n      tipo = 'taller';\n    } else if (nombreLower.includes('caseta') || nombreLower.includes('peaje')) {\n      tipo = 'caseta';\n    } else if (nombreLower.includes('puerto')) {\n      tipo = 'puerto';\n    } else if (nombreLower.includes('cliente') || nombreLower.includes('entrega')) {\n      tipo = 'cliente';\n    }\n    \n    // Extract center point\n    let lat = null;\n    let lng = null;\n    let ubicacion = '';\n    \n    if (geofence.b && geofence.b.cen_x && geofence.b.cen_y) {\n      lat = geofence.b.cen_y;\n      lng = geofence.b.cen_x;\n    } else if (geofence.p && Array.isArray(geofence.p) && geofence.p.length > 0) {\n      let sumX = 0, sumY = 0;\n      for (const point of geofence.p) {\n        sumX += point.x;\n        sumY += point.y;\n      }\n      lat = sumY / geofence.p.length;\n      lng = sumX / geofence.p.length;\n    }\n    \n    if (geofence.d && geofence.d.address) {\n      ubicacion = geofence.d.address;\n    } else {\n      ubicacion = geofence.n || 'Sin ubicación';\n    }\n    \n    // Status mappings\n    let status_entrada, status_salida, actividad_entrada, actividad_salida, prioridad_alerta;\n    \n    switch(tipo) {\n      case 'taller':\n        status_entrada = 'En Taller';\n        status_salida = 'Disponible';\n        actividad_entrada = 'Mantenimiento';\n        actividad_salida = 'Esperando asignación';\n        prioridad_alerta = 'media';\n        break;\n      case 'puerto':\n        status_entrada = 'En Puerto';\n        status_salida = 'En Ruta';\n        actividad_entrada = 'Carga/Descarga';\n        actividad_salida = 'Tránsito';\n        prioridad_alerta = 'alta';\n        break;\n      case 'caseta':\n        status_entrada = 'En Ruta';\n        status_salida = 'En Ruta';\n        actividad_entrada = 'Tránsito autopista';\n        actividad_salida = 'Tránsito';\n        prioridad_alerta = 'baja';\n        break;\n      case 'cliente':\n        status_entrada = 'Descargando';\n        status_salida = 'En Ruta';\n        actividad_entrada = 'Entrega en curso';\n        actividad_salida = 'Tránsito';\n        prioridad_alerta = 'alta';\n        break;\n      default:\n        status_entrada = 'En Ruta';\n        status_salida = 'En Ruta';\n        actividad_entrada = 'Tránsito';\n        actividad_salida = 'Tránsito';\n        prioridad_alerta = 'baja';\n    }\n    \n    items.push({\n      nombre: geofence.n || 'Sin nombre',\n      tipo: tipo,\n      ubicacion: ubicacion,\n      lat: lat,\n      lng: lng,\n      status_entrada: status_entrada,\n      status_salida: status_salida,\n      actividad_entrada: actividad_entrada,\n      actividad_salida: actividad_salida,\n      prioridad_alerta: prioridad_alerta,\n      notas: geofence.d?.dscr || ''\n    });\n  }\n}\n\nreturn items.length > 0 ? items.map(item => ({json: item})) : [{json: {}}];"
+      },
+      "name": "Transformar Geocercas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 300],
+      "id": "transform-geofences"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1400, 100],
+      "id": "aggregate-units",
+      "name": "Aggregate Units"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1400, 300],
+      "id": "aggregate-geofences",
+      "name": "Aggregate Geocercas"
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "geocercas",
+          "mode": "name"
+        },
+        "clear": {
+          "startRow": 2,
+          "endRow": 1000
+        }
+      },
+      "name": "Limpiar Geocercas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1620, 300],
+      "id": "clear-geocercas",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Yv3IPJWrDIRUALZ",
+          "name": "ELAM_Google_Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "geocercas",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nombre": "={{$json.nombre}}",
+            "tipo": "={{$json.tipo}}",
+            "ubicacion": "={{$json.ubicacion}}",
+            "lat": "={{$json.lat}}",
+            "lng": "={{$json.lng}}",
+            "status_entrada": "={{$json.status_entrada}}",
+            "status_salida": "={{$json.status_salida}}",
+            "actividad_entrada": "={{$json.actividad_entrada}}",
+            "actividad_salida": "={{$json.actividad_salida}}",
+            "prioridad_alerta": "={{$json.prioridad_alerta}}",
+            "notas": "={{$json.notas}}"
+          }
+        },
+        "options": {}
+      },
+      "name": "Actualizar Geocercas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1840, 300],
+      "id": "update-geocercas",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Yv3IPJWrDIRUALZ",
+          "name": "ELAM_Google_Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1620, 180],
+      "id": "merge-results",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "url": "https://hst-api.wialon.com/wialon/ajax.html",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "svc",
+              "value": "core/logout"
+            },
+            {
+              "name": "params",
+              "value": "{}"
+            },
+            {
+              "name": "sid",
+              "value": "={{$('Login Wialon').first().json.eid}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Logout Wialon",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2060, 200],
+      "id": "logout-wialon"
+    }
+  ],
+  "connections": {
+    "Cada 3 horas": {
+      "main": [[{"node": "Login Wialon", "type": "main", "index": 0}]]
+    },
+    "Login Wialon": {
+      "main": [
+        [
+          {"node": "Obtener Unidades", "type": "main", "index": 0},
+          {"node": "Buscar Recursos (Geocercas)", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Obtener Unidades": {
+      "main": [[{"node": "Split Unidades", "type": "main", "index": 0}]]
+    },
+    "Buscar Recursos (Geocercas)": {
+      "main": [[{"node": "Split Recursos", "type": "main", "index": 0}]]
+    },
+    "Split Unidades": {
+      "main": [[{"node": "Procesar Datos Unidades", "type": "main", "index": 0}]]
+    },
+    "Split Recursos": {
+      "main": [[{"node": "Obtener Geocercas del Recurso", "type": "main", "index": 0}]]
+    },
+    "Procesar Datos Unidades": {
+      "main": [[{"node": "Actualizar Live Data", "type": "main", "index": 0}]]
+    },
+    "Obtener Geocercas del Recurso": {
+      "main": [[{"node": "Transformar Geocercas", "type": "main", "index": 0}]]
+    },
+    "Actualizar Live Data": {
+      "main": [[{"node": "Aggregate Units", "type": "main", "index": 0}]]
+    },
+    "Transformar Geocercas": {
+      "main": [[{"node": "Aggregate Geocercas", "type": "main", "index": 0}]]
+    },
+    "Aggregate Units": {
+      "main": [[{"node": "Merge", "type": "main", "index": 0}]]
+    },
+    "Aggregate Geocercas": {
+      "main": [[{"node": "Limpiar Geocercas", "type": "main", "index": 0}]]
+    },
+    "Limpiar Geocercas": {
+      "main": [[{"node": "Actualizar Geocercas", "type": "main", "index": 0}]]
+    },
+    "Actualizar Geocercas": {
+      "main": [[{"node": "Merge", "type": "main", "index": 1}]]
+    },
+    "Merge": {
+      "main": [[{"node": "Logout Wialon", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0.0",
+  "tags": []
+}

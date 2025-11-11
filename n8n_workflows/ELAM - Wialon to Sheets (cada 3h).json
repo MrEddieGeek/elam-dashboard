@@ -1,0 +1,394 @@
+{
+  "name": "ELAM - Wialon to Sheets (cada 3h)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 3
+            }
+          ]
+        }
+      },
+      "name": "Cada 3 horas",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        80,
+        -112
+      ],
+      "id": "1a62e7a3-8d94-4ea7-88b7-2bfcd0d4750c"
+    },
+    {
+      "parameters": {
+        "url": "https://hst-api.wialon.com/wialon/ajax.html",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "svc",
+              "value": "token/login"
+            },
+            {
+              "name": "params",
+              "value": "{\"token\":\"5b30e77bacbf13e8d2258fa3f9bf68ad99CBD5C51C552EA1CE515F932F118F6D2A4AD491\"}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Login Wialon",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        256,
+        48
+      ],
+      "id": "e98a8dc3-6965-4521-ac08-e339c0654794"
+    },
+    {
+      "parameters": {
+        "url": "https://hst-api.wialon.com/wialon/ajax.html",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "svc",
+              "value": "core/search_items"
+            },
+            {
+              "name": "params",
+              "value": "={\"spec\":{\"itemsType\":\"avl_unit\",\"propName\":\"sys_name\",\"propValueMask\":\"*\",\"sortType\":\"sys_name\"},\"force\":1,\"flags\":1025,\"from\":0,\"to\":0}"
+            },
+            {
+              "name": "sid",
+              "value": "={{$json.eid}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Obtener Unidades",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        416,
+        -128
+      ],
+      "id": "b77d1693-1725-4f35-943b-6fd353deab3a"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "name": "Split Unidades",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        576,
+        48
+      ],
+      "id": "65a47670-1b18-4302-be24-896bd21bc096"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Procesar datos de cada unidad con detección mejorada de motor\nconst item = $input.item.json;\n\n// Extraer datos relevantes\nconst unidad = item.nm || 'Desconocido';\nconst pos = item.pos || {};\nconst params = pos.p || {};\n\n// Timestamp actual\nconst timestamp = new Date().toISOString();\nconst ultimaActualizacion = pos.t ? new Date(pos.t * 1000).toISOString() : timestamp;\n\n// DETECCIÓN DE ESTADO DEL MOTOR POR INFERENCIA\nlet motorEstado = 'Desconocido';\nconst velocidad = pos.s || 0;\nconst ultimoReporte = pos.t || 0;\nconst tiempoDesdeReporte = Date.now() / 1000 - ultimoReporte; // en segundos\n\n// Método 1: Revisar parámetros directos si existen\nif (params.hasOwnProperty('pwr') || params.hasOwnProperty('power')) {\n  motorEstado = (params.pwr || params.power) > 0 ? 'Encendido' : 'Apagado';\n}\nelse if (params.hasOwnProperty('ign') || params.hasOwnProperty('ignition')) {\n  motorEstado = (params.ign || params.ignition) === 1 ? 'Encendido' : 'Apagado';\n}\nelse if (params.hasOwnProperty('engine_state')) {\n  motorEstado = params.engine_state === 1 ? 'Encendido' : 'Apagado';\n}\n// Método 2: INFERENCIA por velocidad y comportamiento\nelse {\n  if (velocidad > 5) {\n    // Si va a más de 5 km/h, definitivamente está encendido\n    motorEstado = 'Encendido';\n  } else if (velocidad > 0 && velocidad <= 5) {\n    // Movimiento lento, podría estar en maniobras\n    motorEstado = 'Encendido';\n  } else if (velocidad === 0 && tiempoDesdeReporte < 1800) {\n    // Detenido hace menos de 30 min, asumimos apagado\n    motorEstado = 'Apagado';\n  } else {\n    // Sin datos recientes\n    motorEstado = 'Apagado';\n  }\n}\n\n// Determinar evento basado en velocidad y estado\nlet evento = 'Normal';\nif (pos.s >= 5) {\n  evento = 'En movimiento';\n} else if (motorEstado === 'Encendido' && pos.s < 5) {\n  evento = 'Ralentí';\n} else if (motorEstado === 'Apagado') {\n  evento = 'Detenido';\n} else {\n  evento = 'Estacionado';\n}\n\n// Log de parámetros disponibles para debug (opcional, puedes comentar después)\nconsole.log(`Unidad ${unidad}: Parámetros disponibles:`, Object.keys(params));\n\nreturn {\n  timestamp: timestamp,\n  unidad: unidad,\n  lat: pos.y || 0,\n  lng: pos.x || 0,\n  velocidad_kmh: pos.s || 0,\n  motor_estado: motorEstado,\n  combustible_litros: params.fuel_level || params.fuel || 0,\n  odometro_km: params.mileage || params.total_mileage || 0,\n  evento: evento,\n  ultima_actualizacion: ultimaActualizacion\n};"
+      },
+      "name": "Procesar Datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -16
+      ],
+      "id": "711dc4d3-e8c6-477d-a431-ad674ccd0fde"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "live_data",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{$json.timestamp}}",
+            "unidad": "={{$json.unidad}}",
+            "lat": "={{$json.lat}}",
+            "velocidad_kmh": "={{$json.velocidad_kmh}}",
+            "motor_estado": "={{$json.motor_estado}}",
+            "combustible_litros": "={{$json.combustible_litros}}",
+            "odometro_km": "={{$json.odometro_km}}",
+            "evento": "={{$json.evento}}",
+            "lng": "={{$json.lng}}"
+          },
+          "matchingColumns": [
+            "unidad"
+          ],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "unidad",
+              "displayName": "unidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lng",
+              "displayName": "lng",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "velocidad_kmh",
+              "displayName": "velocidad_kmh",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "motor_estado",
+              "displayName": "motor_estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "combustible_litros",
+              "displayName": "combustible_litros",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "odometro_km",
+              "displayName": "odometro_km",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "evento",
+              "displayName": "evento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ultima_actualizacion",
+              "displayName": "ultima_actualizacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "name": "Actualizar Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1040,
+        -32
+      ],
+      "id": "95549603-e989-4328-af20-2dddd8d1fcdd",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Yv3IPJWrDIRUALZ",
+          "name": "ELAM_Google_Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://hst-api.wialon.com/wialon/ajax.html",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "svc",
+              "value": "core/logout"
+            },
+            {
+              "name": "params",
+              "value": "{}"
+            },
+            {
+              "name": "sid",
+              "value": "={{$('Login Wialon').first().json.eid}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Logout Wialon",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1392,
+        16
+      ],
+      "id": "f0952045-8510-46b8-913c-b03e542095a9"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        -176
+      ],
+      "id": "2a2a6999-c71e-4d36-9dc1-d1977d9d3ef4",
+      "name": "Aggregate"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Cada 3 horas": {
+      "main": [
+        [
+          {
+            "node": "Login Wialon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login Wialon": {
+      "main": [
+        [
+          {
+            "node": "Obtener Unidades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Unidades": {
+      "main": [
+        [
+          {
+            "node": "Split Unidades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Unidades": {
+      "main": [
+        [
+          {
+            "node": "Procesar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Datos": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Logout Wialon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "92d371d4-0269-4601-a64d-da2a25da26c8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7a96a660d2f07cd7f6804a292881c662de31610290c3d04312d9584802d96c48"
+  },
+  "id": "cv8OKgwU9GDZYeAi",
+  "tags": []
+}

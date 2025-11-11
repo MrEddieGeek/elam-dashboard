@@ -1,0 +1,5 @@
+timestamp,unidad,evento_tipo,geocerca,status_anterior,status_nuevo,lat,lng,velocidad,operador,procesado_por,notas
+2025-10-31 14:30:00,T-005,entrada,KELLOGS QUERETARO,En Ruta,Descargando,20.5744,-100.3319,5,Juan Pérez,Automático,
+2025-10-31 12:15:00,T-001,salida,ELAM FAW STEP JAL,En Taller,Disponible,20.7208,-103.4925,0,Carlos López,Automático,
+2025-10-31 10:45:00,T-010,entrada,CASETA No. 5 QRO.,En Ruta,En Ruta,20.2961,-99.9308,85,Miguel Ángel,Automático,Tránsito normal
+2025-10-31 09:20:00,T-003,alerta,RUTA A LEON,En Ruta,En Ruta,21.0329,-101.5499,135,Roberto Sánchez,Automático,Exceso de velocidad

@@ -1,0 +1,5 @@
+viaje_id,unidad,fecha_inicio,fecha_fin,origen,destino,km_recorridos,litros_consumidos,costo_combustible,costo_casetas,costo_operador,otros_costos,costo_total,ingreso_viaje,utilidad,rentabilidad_pct,cliente,notas
+V-0001,T-005,28/10/2025 08:00,28/10/2025 18:30,ELAM FAW STEP JAL,KELLOGS QUERETARO,450,120,2940,850,1200,200,5190,8000,2810,35.13,Kellogs,Viaje sin incidentes
+V-0002,T-001,27/10/2025 06:00,27/10/2025 20:00,ELAM FAW STEP JAL,GRUPO MAZA SALTILLO,780,210,5145,1450,1500,350,8445,13500,5055,37.44,Grupo Maza,Entrega exitosa
+V-0003,T-010,26/10/2025 07:30,26/10/2025 16:00,ELAM FAW PUEBLA,KIMBERLY CLARK SAN JUAN,320,95,2327.5,650,1000,150,4127.5,6500,2372.5,36.50,Kimberly Clark,Cliente satisfecho
+V-0004,T-003,25/10/2025 09:00,25/10/2025 19:30,ELAM FAW STEP MTY,PEISA FOODS,520,140,3430,900,1200,250,5780,9000,3220,35.78,Peisa Foods,Retraso 1 hora en descarga

@@ -1,0 +1,206 @@
+{
+  "name": "ELAM - Sync Geocercas from KML",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1b40c8d0-7c25-4f15-9c1b-5e5f2e8e8e1a",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.KML_FILE_URL }}",
+        "options": {}
+      },
+      "id": "2a40c8d0-7c25-4f15-9c1b-5e5f2e8e8e2a",
+      "name": "Obtener KML",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 300],
+      "notes": "Read KML file from URL (Google Drive share link or cloud storage)\n\nSet KML_FILE_URL in n8n environment variables:\nExample: https://drive.google.com/uc?export=download&id=YOUR_FILE_ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse KML and extract geocercas data\nconst kmlContent = $input.first().json.data;\n\n// Function to parse XML\nfunction parseXML(xmlString) {\n  const parser = new DOMParser();\n  return parser.parseFromString(xmlString, 'text/xml');\n}\n\n// Function to detect type based on name\nfunction detectType(name) {\n  const nameUpper = name.toUpperCase();\n  \n  if (nameUpper.includes('TALLER')) return 'taller';\n  if (nameUpper.includes('CASETA') || nameUpper.includes('PEAJE')) return 'caseta';\n  if (nameUpper.includes('PUERTO') || nameUpper.includes('ADUANA')) return 'puerto';\n  if (nameUpper.includes('CLIENTE') || nameUpper.includes('ALMACEN') || nameUpper.includes('BODEGA')) return 'cliente';\n  \n  return 'otro';\n}\n\n// Parse KML\nconst xmlDoc = parseXML(kmlContent);\nconst placemarks = xmlDoc.getElementsByTagName('Placemark');\n\nconst geocercas = [];\nconst now = new Date().toISOString().slice(0, 19).replace('T', ' ');\n\nfor (let i = 0; i < placemarks.length; i++) {\n  const placemark = placemarks[i];\n  \n  try {\n    // Extract name\n    const nameElem = placemark.getElementsByTagName('name')[0];\n    const name = nameElem ? nameElem.textContent.trim() : 'Sin nombre';\n    \n    // Extract description (address)\n    const descElem = placemark.getElementsByTagName('description')[0];\n    let description = '';\n    if (descElem && descElem.textContent) {\n      const descText = descElem.textContent.trim();\n      // Remove image data if present\n      if (descText.includes('img_data=')) {\n        const parts = descText.split('>');\n        description = parts.length > 1 ? parts[parts.length - 1].trim() : descText;\n      } else {\n        description = descText;\n      }\n    }\n    \n    // Extract polygon coordinates\n    const coordsElem = placemark.getElementsByTagName('coordinates')[0];\n    if (!coordsElem || !coordsElem.textContent) {\n      console.log(`Warning: No coordinates for ${name}`);\n      continue;\n    }\n    \n    // Parse coordinates (format: lng,lat,alt lng,lat,alt ...)\n    const coordsText = coordsElem.textContent.trim();\n    const coordPairs = [];\n    \n    for (const coord of coordsText.split(/\\s+/)) {\n      const parts = coord.split(',');\n      if (parts.length >= 2) {\n        const lng = parseFloat(parts[0]);\n        const lat = parseFloat(parts[1]);\n        if (!isNaN(lat) && !isNaN(lng)) {\n          coordPairs.push([lat, lng]);\n        }\n      }\n    }\n    \n    if (coordPairs.length === 0) {\n      console.log(`Warning: No valid coordinates for ${name}`);\n      continue;\n    }\n    \n    // Calculate center point (average of all coordinates)\n    const avgLat = coordPairs.reduce((sum, pair) => sum + pair[0], 0) / coordPairs.length;\n    const avgLng = coordPairs.reduce((sum, pair) => sum + pair[1], 0) / coordPairs.length;\n    \n    // Auto-detect type\n    const tipo = detectType(name);\n    \n    // Create geocerca entry\n    geocercas.push({\n      nombre: name,\n      descripcion: description,\n      lat: Math.round(avgLat * 1000000) / 1000000,\n      lng: Math.round(avgLng * 1000000) / 1000000,\n      tipo: tipo,\n      poligono_coords: JSON.stringify(coordPairs),\n      fecha_creacion: now\n    });\n    \n  } catch (error) {\n    console.error(`Error parsing placemark: ${error.message}`);\n    continue;\n  }\n}\n\nconsole.log(`Parsed ${geocercas.length} geocercas from KML`);\n\n// Return as array for n8n\nreturn geocercas.map(g => ({ json: g }));"
+      },
+      "id": "3a40c8d0-7c25-4f15-9c1b-5e5f2e8e8e3a",
+      "name": "Procesar KML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "notes": "Parse KML XML and extract geofence data:\n- Name\n- Description (address)\n- Polygon coordinates\n- Center point (lat/lng)\n- Auto-detect type (taller/caseta/puerto/cliente)"
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "geocercas",
+          "mode": "name"
+        },
+        "clear": {
+          "keepFirstRow": true
+        }
+      },
+      "id": "4a40c8d0-7c25-4f15-9c1b-5e5f2e8e8e4a",
+      "name": "Limpiar Geocercas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.3,
+      "position": [900, 300],
+      "notes": "Clear existing geocercas data (keep header row)"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "geocercas",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "removed": false,
+              "type": "string"
+            },
+            {
+              "id": "descripcion",
+              "displayName": "descripcion",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "removed": false,
+              "type": "string"
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "removed": false,
+              "type": "number"
+            },
+            {
+              "id": "lng",
+              "displayName": "lng",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "removed": false,
+              "type": "number"
+            },
+            {
+              "id": "tipo",
+              "displayName": "tipo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "removed": false,
+              "type": "string"
+            },
+            {
+              "id": "poligono_coords",
+              "displayName": "poligono_coords",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "removed": false,
+              "type": "string"
+            },
+            {
+              "id": "fecha_creacion",
+              "displayName": "fecha_creacion",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "removed": false,
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5a40c8d0-7c25-4f15-9c1b-5e5f2e8e8e5a",
+      "name": "Actualizar Geocercas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.3,
+      "position": [1120, 300],
+      "notes": "Append all geocercas to sheet"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Obtener KML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener KML": {
+      "main": [
+        [
+          {
+            "node": "Procesar KML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar KML": {
+      "main": [
+        [
+          {
+            "node": "Limpiar Geocercas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpiar Geocercas": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Geocercas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-11-10T00:00:00.000Z",
+  "versionId": "1"
+}

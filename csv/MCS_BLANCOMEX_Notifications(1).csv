@@ -1,0 +1,97 @@
+Name;Control type;Parameters;Actions;Text;Description
+BLANCOMEX: BOTON DE PANICO ST;Input activation;in2;Display online notification in a popup window, Register violation for unit;ALARMA DE BOTÓN DE PÁNICO %UNIT%: activado Entrada digital 2. En %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;
+BLANCOMEX: ENERGÍA CORTADA ST;Parameter inside range;alert_id from 41 to 41;Send notification to Telegram, Display online notification in a popup window, Register violation for unit;ALARMA DE ENERGÍA CORTADA %UNIT%: Parámetro %PARAM_NAME% activado con el valor %PARAM_VALUE% el %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;
+BLANCOMEX: PARO DE MOTOR ACTIVADO ST;Parameter text;"*04;01*";Display online notification in a popup window, Register violation for unit; SE HA ACTIVADO PARO DE MOTOR PARA LA UNIDAD %UNIT%: Parámetro %PARAM_NAME% activado con el valor %PARAM_VALUE% el %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;
+BLANCOMEX: PARO DE MOTOR DESACTIVADO ST;Parameter text;"*04;02*";Display online notification in a popup window, Register violation for unit; SE HA DESACTIVADO PARO DE MOTOR PARA LA UNIDAD %UNIT%: Parámetro %PARAM_NAME% activado con el valor %PARAM_VALUE% el %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;
+BLANCOMEX:BATERIA INTERNA CONECTADA ST;Parameter inside range;alert_id from 44 to 44;Display online notification in a popup window, Register violation for unit;ALARMA DE BATERIA INTERNA CONECTADA %UNIT%: Parámetro %PARAM_NAME% activado con el valor %PARAM_VALUE% el %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;
+BLANCOMEX:BATERIA INTERNA DESCONECTADA ST;Parameter inside range;alert_id from 45 to 45;Display online notification in a popup window, Register violation for unit;ALARMA DE BATERIA INTERNA DESCONECTADA %UNIT%: Parámetro %PARAM_NAME% activado con el valor %PARAM_VALUE% el %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;
+BLANCOMEX:BOTON DE PANICO;Input activation;in2;Display online notification in a popup window, Register violation for unit;ALARMA DE BOTON DE PANICO %UNIT%: activado Entrada digital 2, En %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;teltonika
+BLANCOMEX:ENERGIA CORTADA;Parameter inside range;pwr_ext from 0 to 8;Display online notification in a popup window, Register violation for unit;ALARMA DE ENERGIA CORTADA %UNIT%: Parámetro %PARAM_NAME% activado con el valor %PARAM_VALUE% el %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;teltonika
+Copy of BLANCOMEX: BOTON DE PANICO ST;Input activation;in2;Send notification to Telegram, Display online notification in a popup window, Register violation for unit;ALARMA DE BOTÓN DE PÁNICO %UNIT%: activado Entrada digital 2. En %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;
+Entrada a pension;Inside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""entrada_pension"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Unidad en almacenamiento
+Entrada a taller;Inside geofence;;Display online notification in a popup window, Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""entrada_taller"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";
+Entrada Agecnía FAW;Inside geofence;;Send email to: guillermo.acevedo@elamlogistics.mx, Display online notification in a popup window;%UNIT% entró en %ZONE%. En %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;
+Entrada Agencia Elam Step;Inside geofence;;Send email to: guillermo.acevedo@elamlogistics.mx, Display online notification in a popup window;%UNIT% entró en %ZONE%. En %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;
+ENTRADA KELLOKS QUERETARO;Inside geofence;;Send notification to Telegram, Display online notification in a popup window;"📦 ENTRADA A CLIENTE
+Unidad: %UNIT%
+Cliente: %ZONE%
+Hora: %POS_TIME%
+Velocidad: %SPEED% km/h";
+Entrada_cliente;Inside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""entrada_cliente"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";Entrada con el cliente
+Entrada_taller;Inside geofence;;Display online notification in a popup window, Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""entrada_taller"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";La unidad ha entrado al taller
+Exceso de Velocidad;Speed;over 120 km/h;Display online notification in a popup window, Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""exceso_velocidad"",
+  ""geocerca"": ""En ruta"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";
+Fuera de ruta Lzo/Pbl;Outside geofence;;Display online notification in a popup window, Register violation for unit;%UNIT% abandonó %ZONE%. En %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;
+notificacion de cliente_prueba;Inside geofence;;Send notification to Telegram, Display online notification in a popup window;"📦 ENTRADA A CLIENTE
+Unidad: %UNIT%
+Cliente: %ZONE%
+Hora: %POS_TIME%
+Velocidad: %SPEED% km/h";
+NOTIFICACION DE PRUEBA;Inside geofence;;Send notification to Telegram;;
+Perdida de señal;Connection loss, No data;over 15 minutes;Send notification to Telegram, Register violation for unit;"📡 PÉRDIDA DE SEÑAL
+Unidad: %UNIT%
+Estado: %LOSE_RESTORE%
+Última ubicación: %LOCATION%
+Hora: %POS_TIME%";
+Salida Agencia Elam Step;Outside geofence;;Send email to: guillermo.acevedo@elamlogistics.mx, Display online notification in a popup window;%UNIT% abandonó %ZONE%. En %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;
+Salida Agencía FAW;Outside geofence;;Send email to: guillermo.acevedo@elamlogistics.mx, Display online notification in a popup window;%UNIT% abandonó %ZONE%. En %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;
+Salida de pension;Outside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""salida_pension"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";
+Salida de Taller;Outside geofence;;Send email to: guillermo.acevedo@elamlogistics.mx, Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""salida_taller"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";La unidad ha salido del taller
+SALIDA KELLOKS QUERETARO;Outside geofence;;Display online notification in a popup window;%UNIT% abandonó %ZONE%. En %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;
+Salida_cliente;Outside geofence;;Send POST request;"{
+  ""unidad"": ""%UNIT%"",
+  ""evento"": ""salida_cliente"",
+  ""geocerca"": ""%ZONE%"",
+  ""hora"": ""%POS_TIME%"",
+  ""velocidad"": ""%SPEED%"",
+  ""ubicacion"": ""%LOCATION%""
+}";
+Unidad detenida 15min;Off time;over 15 min;Display online notification in a popup window, Register violation for unit;%UNIT% excedió tiempo de inactividad. En %POS_TIME% se movió con una velocidad de %SPEED% cerca de '%LOCATION%'.;

@@ -1,0 +1,10 @@
+parametro,valor,unidad,fecha_actualizacion,notas
+Precio Diesel,24.50,MXN/litro,31/10/2025,Precio promedio región Guadalajara
+Rendimiento Promedio,3.5,km/litro,31/10/2025,Promedio de toda la flota
+Costo Operador Día,800,MXN,31/10/2025,Pago diario base
+Costo Caseta Promedio,250,MXN,31/10/2025,Promedio por caseta en rutas comunes
+Mantenimiento por KM,0.80,MXN/km,31/10/2025,Costo promedio de mantenimiento preventivo
+Seguro Mensual Unidad,3500,MXN,31/10/2025,Costo mensual de seguro por unidad
+Depreciación Mensual,5000,MXN,31/10/2025,Depreciación estimada mensual por unidad
+Costo Fijo Operación,15000,MXN/mes,31/10/2025,Costos administrativos prorrateados por unidad
+Margen Mínimo Esperado,25,%,31/10/2025,Margen de utilidad objetivo en cada viaje

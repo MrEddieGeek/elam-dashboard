@@ -1,0 +1,6 @@
+unidad,fecha_servicio,tipo_servicio,kilometraje,costo,proveedor,proximo_servicio_km,proximo_servicio_fecha,notas,estado
+T-001,15/10/2025,Preventivo,45000,3500,ELAM FAW STEP JAL,50000,15/12/2025,Cambio de aceite y filtros,Completado
+T-002,20/10/2025,Llantas,38000,12000,ELAM FAW STEP JAL,88000,20/04/2026,Cambio de 6 llantas traseras,Completado
+T-003,25/10/2025,Correctivo,52000,8500,ELAM FAW PUEBLA,57000,25/11/2025,Reparación sistema eléctrico,Completado
+T-004,,Preventivo,30000,0,ELAM FAW STEP MTY,35000,15/11/2025,Pendiente servicio de 30k,Pendiente
+T-005,28/10/2025,Aceite,41000,2800,ELAM FAW STEP JAL,46000,28/11/2025,Cambio de aceite motor,Completado

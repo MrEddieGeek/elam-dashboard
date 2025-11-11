@@ -1,0 +1,519 @@
+{
+  "name": "ELAM - Telegram Listener v2 COMPLETE",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Obtener datos directamente del webhook\n// Los datos ya vienen como JSON desde Wialon\nconst data = $input.item.json;\n\n// Debug: ver qué recibimos\nconsole.log('Datos recibidos:', JSON.stringify(data, null, 2));\n\n// Validar que tengamos los datos esperados de Wialon\nif (!data.unidad || !data.evento) {\n  // Si no están directamente, pueden estar en 'body'\n  if (data.body) {\n    const bodyData = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;\n    \n    return [{\n      tipo_evento: bodyData.evento,\n      unidad: bodyData.unidad,\n      geocerca: bodyData.geocerca || '',\n      hora: bodyData.hora || new Date().toISOString(),\n      velocidad: bodyData.velocidad || '0',\n      lat: bodyData.lat || '',\n      lng: bodyData.lng || '',\n      ubicacion: bodyData.ubicacion || bodyData.geocerca || '',\n      accion: bodyData.evento?.includes('entrada') ? 'entrada' : bodyData.evento?.includes('salida') ? 'salida' : 'alerta',\n      timestamp: new Date().toISOString()\n    }];\n  }\n  \n  throw new Error('No se encontraron datos de Wialon. Keys recibidos: ' + Object.keys(data).join(', '));\n}\n\n// Si los datos están directamente disponibles\nreturn [{\n  tipo_evento: data.evento,\n  unidad: data.unidad,\n  geocerca: data.geocerca || '',\n  hora: data.hora || new Date().toISOString(),\n  velocidad: data.velocidad || '0',\n  lat: data.lat || '',\n  lng: data.lng || '',\n  ubicacion: data.ubicacion || data.geocerca || '',\n  accion: data.evento?.includes('entrada') ? 'entrada' : data.evento?.includes('salida') ? 'salida' : 'alerta',\n  timestamp: new Date().toISOString()\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [208, 0],
+      "id": "66b0032e-261a-4ee2-a4fa-c4aa59738c40",
+      "name": "Parser Wialon"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 998355349,
+          "mode": "list",
+          "cachedResultName": "geocercas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE/edit#gid=998355349"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "nombre",
+              "lookupValue": "={{ $json.geocerca }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [400, 0],
+      "id": "26d6288c-c05e-43b6-bf25-26c73bd03662",
+      "name": "Buscar Geocerca",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Yv3IPJWrDIRUALZ",
+          "name": "ELAM_Google_Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "unidades_operadores",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "unidad",
+              "lookupValue": "={{ $('Parser Wialon').item.json.unidad }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [592, 0],
+      "id": "NEW-OPERATOR-LOOKUP",
+      "name": "Buscar Operador",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Yv3IPJWrDIRUALZ",
+          "name": "ELAM_Google_Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "status_operativo",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Unidad",
+              "lookupValue": "={{ $('Parser Wialon').item.json.unidad }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [784, 0],
+      "id": "NEW-STATUS-LOOKUP",
+      "name": "Leer Status Actual",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Yv3IPJWrDIRUALZ",
+          "name": "ELAM_Google_Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener datos del parser, geocerca y operador\nconst evento = $('Parser Wialon').item.json;\nconst geocerca = $('Buscar Geocerca').item.json;\nconst operador = $('Buscar Operador').item.json;\nconst statusActual = $('Leer Status Actual').item.json;\n\n// Determinar nuevo status y actividad según el tipo de geocerca y acción\nlet nuevoStatus = '';\nlet nuevaActividad = '';\n\n// Si encontramos la geocerca en nuestra base de datos\nif (geocerca && geocerca.nombre) {\n  // Usar el status y actividad predefinidos según entrada/salida\n  if (evento.accion === 'entrada') {\n    nuevoStatus = geocerca.status_entrada || 'En Ruta';\n    nuevaActividad = geocerca.actividad_entrada || 'Verificar';\n  } else if (evento.accion === 'salida') {\n    nuevoStatus = geocerca.status_salida || 'En Ruta';\n    nuevaActividad = geocerca.actividad_salida || 'Tránsito';\n  } else {\n    // Es una alerta\n    nuevoStatus = 'Alerta';\n    nuevaActividad = evento.tipo_evento.replace(/_/g, ' ');\n  }\n} else {\n  // Geocerca no encontrada en la base de datos - usar defaults\n  if (evento.accion === 'entrada') {\n    nuevoStatus = 'En Ruta';\n    nuevaActividad = 'Verificar ubicación';\n  } else if (evento.accion === 'salida') {\n    nuevoStatus = 'En Ruta';\n    nuevaActividad = 'Tránsito';\n  } else {\n    nuevoStatus = 'Alerta';\n    nuevaActividad = evento.tipo_evento.replace(/_/g, ' ');\n  }\n}\n\n// *** NUEVA FUNCIONALIDAD: Calcular Próximo Movimiento ***\nlet proximoMovimiento = '';\nswitch(nuevoStatus) {\n  case 'Pensión':\n  case 'Pensíon':\n    proximoMovimiento = 'Disponible para asignación';\n    break;\n  case 'Taller':\n    proximoMovimiento = 'En reparación';\n    break;\n  case 'Descargando':\n    proximoMovimiento = 'Regreso a base';\n    break;\n  case 'En Puerto':\n    proximoMovimiento = 'Esperando carga';\n    break;\n  case 'Disponible':\n    proximoMovimiento = 'Pendiente de asignación';\n    break;\n  case 'En Ruta':\n    proximoMovimiento = 'En tránsito';\n    break;\n  case 'Caseta':\n    proximoMovimiento = 'En tránsito';\n    break;\n  default:\n    proximoMovimiento = 'Verificar status';\n}\n\n// Retornar objeto con toda la información necesaria\nreturn {\n  unidad: evento.unidad,\n  nuevo_status: nuevoStatus,\n  nueva_actividad: nuevaActividad,\n  proximo_movimiento: proximoMovimiento,\n  operador: operador.operador_asignado || 'Sin asignar',\n  status_anterior: statusActual.Status || 'Desconocido',\n  ubicacion: geocerca.nombre || evento.geocerca,\n  tipo_geocerca: geocerca.tipo || 'desconocido',\n  evento_original: evento,\n  geocerca_data: geocerca,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [976, 0],
+      "id": "ed96c847-e978-4f08-8f06-47a8c9d85b75",
+      "name": "Determinar Nuevo Status",
+      "alwaysOutputData": false,
+      "retryOnFail": false,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "status_operativo"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": 0,
+            "Unidad": "={{ $json.unidad }}",
+            "Actividad": "={{ $json.nueva_actividad }}",
+            "Ubicación": "={{ $json.ubicacion }}",
+            "Próximo Movimiento": "={{ $json.proximo_movimiento }}",
+            "Operador": "={{ $json.operador }}",
+            "Status": "={{ $json.nuevo_status }}",
+            "Última Actualización": "={{ $now.format('yyyy-MM-dd HH:mm:ss') }}"
+          },
+          "matchingColumns": ["Unidad"],
+          "schema": [
+            {
+              "id": "Unidad",
+              "displayName": "Unidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Actividad",
+              "displayName": "Actividad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ubicación",
+              "displayName": "Ubicación",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Próximo Movimiento",
+              "displayName": "Próximo Movimiento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Operador",
+              "displayName": "Operador",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Última Actualización",
+              "displayName": "Última Actualización",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1168, 0],
+      "id": "a895afc9-5a71-4408-b261-a3cc50eaf2d2",
+      "name": "Actualizar Status Operativo",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Yv3IPJWrDIRUALZ",
+          "name": "ELAM_Google_Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "eventos_log",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $now.format('yyyy-MM-dd HH:mm:ss') }}",
+            "unidad": "={{ $('Determinar Nuevo Status').item.json.unidad }}",
+            "evento_tipo": "={{ $('Parser Wialon').item.json.accion }}",
+            "geocerca": "={{ $('Determinar Nuevo Status').item.json.ubicacion }}",
+            "status_anterior": "={{ $('Determinar Nuevo Status').item.json.status_anterior }}",
+            "status_nuevo": "={{ $('Determinar Nuevo Status').item.json.nuevo_status }}",
+            "lat": "={{ $('Buscar Geocerca').item.json.lat }}",
+            "lng": "={{ $('Buscar Geocerca').item.json.lng }}",
+            "velocidad": "={{ $('Parser Wialon').item.json.velocidad }}",
+            "operador": "={{ $('Determinar Nuevo Status').item.json.operador }}",
+            "procesado_por": "Automático",
+            "notas": "={{ $('Parser Wialon').item.json.tipo_evento }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "unidad",
+              "displayName": "unidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "evento_tipo",
+              "displayName": "evento_tipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "geocerca",
+              "displayName": "geocerca",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status_anterior",
+              "displayName": "status_anterior",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status_nuevo",
+              "displayName": "status_nuevo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lng",
+              "displayName": "lng",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "velocidad",
+              "displayName": "velocidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "operador",
+              "displayName": "operador",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "procesado_por",
+              "displayName": "procesado_por",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "notas",
+              "displayName": "notas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1360, 0],
+      "id": "07e5d863-bb7c-4f74-b119-bc4d1591f09a",
+      "name": "Registrar Evento",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Yv3IPJWrDIRUALZ",
+          "name": "ELAM_Google_Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-wialon",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-64, 0],
+      "id": "fbe73728-0125-4608-beca-58c502c31435",
+      "name": "Webhook",
+      "webhookId": "f7560066-45b9-4da6-b9e5-349497ea2c1a"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Parser Wialon": {
+      "main": [
+        [
+          {
+            "node": "Buscar Geocerca",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Geocerca": {
+      "main": [
+        [
+          {
+            "node": "Buscar Operador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Operador": {
+      "main": [
+        [
+          {
+            "node": "Leer Status Actual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Status Actual": {
+      "main": [
+        [
+          {
+            "node": "Determinar Nuevo Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Determinar Nuevo Status": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Status Operativo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Status Operativo": {
+      "main": [
+        [
+          {
+            "node": "Registrar Evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parser Wialon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "COMPLETE-VERSION-2025-11-11",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7a96a660d2f07cd7f6804a292881c662de31610290c3d04312d9584802d96c48"
+  },
+  "id": "NEW-COMPLETE-VERSION",
+  "tags": []
+}

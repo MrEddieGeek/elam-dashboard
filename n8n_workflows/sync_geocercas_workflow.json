@@ -1,0 +1,323 @@
+{
+  "name": "Sync Geocercas from Wialon to Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Cada 6 horas",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://hst-api.wialon.com/wialon/ajax.html?svc=token/login&params={\"token\":\"{{$env.WIALON_TOKEN}}\"}",
+        "method": "POST",
+        "options": {}
+      },
+      "id": "login-wialon",
+      "name": "Login Wialon",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 300],
+      "notes": "Authenticate to Wialon API using n8n environment variables"
+    },
+    {
+      "parameters": {
+        "url": "https://hst-api.wialon.com/wialon/ajax.html?svc=resource/get_zones&params={\"itemId\":{{$json.eid}},\"flags\":1}",
+        "method": "POST",
+        "options": {
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "sid",
+                "value": "={{$node[\"Login Wialon\"].json.eid}}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "get-resources",
+      "name": "Obtener Recursos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [690, 300],
+      "notes": "Get all resource accounts that may contain geofences"
+    },
+    {
+      "parameters": {
+        "url": "https://hst-api.wialon.com/wialon/ajax.html",
+        "method": "POST",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "svc",
+              "value": "core/search_items"
+            },
+            {
+              "name": "params",
+              "value": "{\"spec\":{\"itemsType\":\"avl_resource\",\"propName\":\"*\",\"propValueMask\":\"*\",\"sortType\":\"sys_name\"},\"force\":1,\"flags\":1,\"from\":0,\"to\":0}"
+            },
+            {
+              "name": "sid",
+              "value": "={{$node[\"Login Wialon\"].json.eid}}"
+            }
+          ]
+        }
+      },
+      "id": "search-resources",
+      "name": "Buscar Recursos con Geocercas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [910, 300],
+      "notes": "Search for all resources (accounts) in Wialon"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "id": "split-resources",
+      "name": "Split Recursos",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [1130, 300],
+      "notes": "Process each resource individually"
+    },
+    {
+      "parameters": {
+        "url": "https://hst-api.wialon.com/wialon/ajax.html",
+        "method": "POST",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "svc",
+              "value": "resource/get_zone_data"
+            },
+            {
+              "name": "params",
+              "value": "={\"itemId\":{{$json.id}},\"flags\":1}"
+            },
+            {
+              "name": "sid",
+              "value": "={{$node[\"Login Wialon\"].json.eid}}"
+            }
+          ]
+        }
+      },
+      "id": "get-geofences",
+      "name": "Obtener Geocercas del Recurso",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1350, 300],
+      "notes": "Get all geofences from each resource"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and transform geofence data from Wialon to Google Sheets format\nconst items = [];\n\n// Get the geofences from the response\nconst geofences = $input.item.json;\n\nif (geofences && Array.isArray(geofences)) {\n  for (const geofence of geofences) {\n    // Determine geofence type based on name or properties\n    let tipo = 'otro';\n    const nombreLower = (geofence.n || '').toLowerCase();\n    \n    if (nombreLower.includes('taller') || nombreLower.includes('faw') || nombreLower.includes('elam')) {\n      tipo = 'taller';\n    } else if (nombreLower.includes('caseta') || nombreLower.includes('peaje')) {\n      tipo = 'caseta';\n    } else if (nombreLower.includes('puerto')) {\n      tipo = 'puerto';\n    } else if (nombreLower.includes('cliente') || nombreLower.includes('entrega')) {\n      tipo = 'cliente';\n    }\n    \n    // Extract center point from geofence\n    let lat = null;\n    let lng = null;\n    let ubicacion = '';\n    \n    // Wialon geofences can be circles, polygons, or lines\n    if (geofence.b && geofence.b.cen_x && geofence.b.cen_y) {\n      // Center point available\n      lat = geofence.b.cen_y;\n      lng = geofence.b.cen_x;\n    } else if (geofence.p && Array.isArray(geofence.p) && geofence.p.length > 0) {\n      // Polygon - calculate centroid\n      let sumX = 0, sumY = 0;\n      for (const point of geofence.p) {\n        sumX += point.x;\n        sumY += point.y;\n      }\n      lat = sumY / geofence.p.length;\n      lng = sumX / geofence.p.length;\n    }\n    \n    // Get address if available\n    if (geofence.d && geofence.d.address) {\n      ubicacion = geofence.d.address;\n    } else {\n      ubicacion = geofence.n || 'Sin ubicación';\n    }\n    \n    // Determine status and activity based on type\n    let status_entrada, status_salida, actividad_entrada, actividad_salida, prioridad_alerta;\n    \n    switch(tipo) {\n      case 'taller':\n        status_entrada = 'En Taller';\n        status_salida = 'Disponible';\n        actividad_entrada = 'Mantenimiento';\n        actividad_salida = 'Esperando asignación';\n        prioridad_alerta = 'media';\n        break;\n      case 'puerto':\n        status_entrada = 'En Puerto';\n        status_salida = 'En Ruta';\n        actividad_entrada = 'Carga/Descarga';\n        actividad_salida = 'Tránsito';\n        prioridad_alerta = 'alta';\n        break;\n      case 'caseta':\n        status_entrada = 'En Ruta';\n        status_salida = 'En Ruta';\n        actividad_entrada = 'Tránsito autopista';\n        actividad_salida = 'Tránsito';\n        prioridad_alerta = 'baja';\n        break;\n      case 'cliente':\n        status_entrada = 'Descargando';\n        status_salida = 'En Ruta';\n        actividad_entrada = 'Entrega en curso';\n        actividad_salida = 'Tránsito';\n        prioridad_alerta = 'alta';\n        break;\n      default:\n        status_entrada = 'En Ruta';\n        status_salida = 'En Ruta';\n        actividad_entrada = 'Tránsito';\n        actividad_salida = 'Tránsito';\n        prioridad_alerta = 'baja';\n    }\n    \n    items.push({\n      json: {\n        nombre: geofence.n || 'Sin nombre',\n        tipo: tipo,\n        ubicacion: ubicacion,\n        lat: lat,\n        lng: lng,\n        status_entrada: status_entrada,\n        status_salida: status_salida,\n        actividad_entrada: actividad_entrada,\n        actividad_salida: actividad_salida,\n        prioridad_alerta: prioridad_alerta,\n        notas: geofence.d?.dscr || '',\n        wialon_id: geofence.id,\n        ultima_actualizacion: new Date().toISOString()\n      }\n    });\n  }\n}\n\nreturn items;"
+      },
+      "id": "transform-geofences",
+      "name": "Transformar Datos de Geocercas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1570, 300],
+      "notes": "Convert Wialon geofence format to Google Sheets format"
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$env.GOOGLE_SHEET_ID}}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "geocercas",
+          "mode": "name"
+        },
+        "clear": {
+          "startRow": 2,
+          "endRow": 1000
+        }
+      },
+      "id": "clear-sheet",
+      "name": "Limpiar Hoja Geocercas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1790, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_EXISTING_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Clear existing geofence data (keep header row)"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$env.GOOGLE_SHEET_ID}}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "geocercas",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "nombre": "={{$json.nombre}}",
+            "tipo": "={{$json.tipo}}",
+            "ubicacion": "={{$json.ubicacion}}",
+            "lat": "={{$json.lat}}",
+            "lng": "={{$json.lng}}",
+            "status_entrada": "={{$json.status_entrada}}",
+            "status_salida": "={{$json.status_salida}}",
+            "actividad_entrada": "={{$json.actividad_entrada}}",
+            "actividad_salida": "={{$json.actividad_salida}}",
+            "prioridad_alerta": "={{$json.prioridad_alerta}}",
+            "notas": "={{$json.notas}}"
+          }
+        },
+        "options": {}
+      },
+      "id": "update-sheet",
+      "name": "Actualizar Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [2010, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_EXISTING_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Write all geofences to Google Sheets"
+    },
+    {
+      "parameters": {
+        "url": "https://hst-api.wialon.com/wialon/ajax.html?svc=core/logout&params={}&sid={{$node[\"Login Wialon\"].json.eid}}",
+        "method": "POST"
+      },
+      "id": "logout-wialon",
+      "name": "Logout Wialon",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2230, 300],
+      "notes": "Close Wialon session properly"
+    }
+  ],
+  "connections": {
+    "Cada 6 horas": {
+      "main": [
+        [
+          {
+            "node": "Login Wialon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login Wialon": {
+      "main": [
+        [
+          {
+            "node": "Buscar Recursos con Geocercas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Recursos con Geocercas": {
+      "main": [
+        [
+          {
+            "node": "Split Recursos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Recursos": {
+      "main": [
+        [
+          {
+            "node": "Obtener Geocercas del Recurso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Geocercas del Recurso": {
+      "main": [
+        [
+          {
+            "node": "Transformar Datos de Geocercas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transformar Datos de Geocercas": {
+      "main": [
+        [
+          {
+            "node": "Limpiar Hoja Geocercas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpiar Hoja Geocercas": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Logout Wialon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-11-10T00:00:00.000Z",
+  "versionId": "1.0.0"
+}

@@ -1,0 +1,11 @@
+# Python dependencies for ELAM Dashboard scripts
+# Install with: pip install -r requirements.txt
+
+# Google Sheets API
+google-auth==2.26.2
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+google-api-python-client==2.116.0
+
+# XML parsing (included in standard library, listed for reference)
+# lxml  # Optional: for better XML parsing performance

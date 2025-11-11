@@ -1,0 +1,6 @@
+ruta_id,unidad,operador,fecha_programada,hora_salida,origen,destino,cliente,carga,status,geocercas_ruta,km_estimados,tiempo_estimado,fecha_llegada_estimada,observaciones
+R-0001,T-005,Juan Pérez,01/11/2025,06:00,ELAM FAW STEP JAL,KELLOGS QUERETARO,Kellogs,20 toneladas cereal,Pendiente,"ELAM JAL,CASETA No.5 QRO,KELLOKS QRO",450,6.5,01/11/2025 12:30,Cliente prioritario - confirmar llegada
+R-0002,T-001,Carlos López,01/11/2025,05:00,ELAM FAW STEP JAL,GRUPO MAZA SALTILLO,Grupo Maza,25 toneladas materiales,Pendiente,"ELAM JAL,CASETA AGUASCALIENTES,GRUPO MAZA SLP",780,10.0,01/11/2025 15:00,Ruta larga - 2 operadores
+R-0003,T-010,Miguel Ángel,02/11/2025,07:00,ELAM FAW PUEBLA,KIMBERLY CLARK SAN JUAN,Kimberly Clark,18 toneladas papel,Pendiente,"ELAM PBL,CASETA No.5 QRO,KC SAN JUAN",320,5.0,02/11/2025 12:00,Entrega matutina
+R-0004,T-003,Roberto Sánchez,02/11/2025,08:00,ELAM FAW STEP MTY,PEISA FOODS,Peisa Foods,22 toneladas alimentos,Pendiente,"ELAM MTY,CASETA SLP,PEISA",520,7.5,02/11/2025 15:30,Carga refrigerada
+R-0005,T-012,,03/11/2025,06:00,ELAM FAW STEP JAL,DESAMEX TOLUCA,Desamex,15 toneladas,Pendiente,"ELAM JAL,CASETA CHAPALA,DESAMEX",380,6.0,03/11/2025 12:00,Asignar operador
