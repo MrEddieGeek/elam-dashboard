@@ -62,12 +62,19 @@ export function UnitsTable({ data = [], className }) {
     const sorted = [...filteredData];
 
     sorted.sort((a, b) => {
-      let aVal = a[sortField] || '';
-      let bVal = b[sortField] || '';
+      let aVal = a[sortField];
+      let bVal = b[sortField];
 
-      // Convertir a string para comparación
-      aVal = String(aVal).toLowerCase();
-      bVal = String(bVal).toLowerCase();
+      // Handle numeric fields (rutasSemana)
+      if (sortField === 'rutasSemana') {
+        aVal = parseInt(aVal) || 0;
+        bVal = parseInt(bVal) || 0;
+        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+
+      // Handle string fields
+      aVal = String(aVal || '').toLowerCase();
+      bVal = String(bVal || '').toLowerCase();
 
       if (sortDirection === 'asc') {
         return aVal > bVal ? 1 : -1;
@@ -153,13 +160,14 @@ export function UnitsTable({ data = [], className }) {
               <SortableHeader field="ubicacion">Ubicación</SortableHeader>
               <SortableHeader field="proximoMovimiento">Próximo Movimiento</SortableHeader>
               <SortableHeader field="operador">Operador</SortableHeader>
+              <SortableHeader field="rutasSemana">Rutas (semana)</SortableHeader>
               <SortableHeader field="ultimaActualizacion">Última Actualización</SortableHeader>
             </tr>
           </thead>
           <tbody className="bg-slate-900/30 divide-y divide-slate-800">
             {sortedData.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-4 py-8 text-center text-slate-500">
+                <td colSpan="8" className="px-4 py-8 text-center text-slate-500">
                   No se encontraron resultados para "{searchTerm}"
                 </td>
               </tr>
@@ -195,6 +203,11 @@ export function UnitsTable({ data = [], className }) {
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm text-slate-300">
                       {unit.operador || 'Sin asignar'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-950/30 border border-emerald-800/30 text-xs font-medium text-emerald-400">
+                      {unit.rutasSemana || 0}
                     </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">

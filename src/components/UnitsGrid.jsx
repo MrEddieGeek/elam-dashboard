@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { StatusBadge } from '@/components/StatusBadge';
-import { Truck, MapPin, Activity, User, Clock, Navigation } from 'lucide-react';
+import { Truck, MapPin, Activity, User, Clock, Navigation, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -127,6 +127,20 @@ function UnitCard({ unit, index }) {
             iconColor="text-blue-400"
             iconBg="bg-blue-950/50"
           />
+
+          {/* Rutas completadas esta semana */}
+          {unit.rutasSemana !== undefined && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-950/30 border border-emerald-800/30">
+              <div className="p-1.5 rounded-md bg-emerald-950/50">
+                <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-emerald-400 font-medium">
+                  {unit.rutasSemana || 0} {unit.rutasSemana === 1 ? 'ruta completada' : 'rutas completadas'} esta semana
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Última Actualización */}
           <div className="pt-3 mt-3 border-t border-slate-700/50">

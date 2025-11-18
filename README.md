@@ -49,6 +49,7 @@ ELAM Dashboard is a comprehensive fleet management solution that provides:
 - 📍 **Geofence Management:** 298 geocercas (talleres, casetas, puertos, clientes)
 - 🔔 **Event Notifications:** Entry/exit alerts via Telegram
 - 📝 **Complete Audit Trail:** All status changes logged with before/after states
+- 🚦 **Route Completion Tracking:** Auto-detect route start/completion, weekly counter per unit
 
 ### Automation
 - ⏰ **Every 3 hours:** Telemetry sync from Wialon API
@@ -152,6 +153,8 @@ python3 scripts/import_geocercas.py
 - **[Deployment Guide](docs/setup/DEPLOYMENT_GUIDE.md)** - Deploy to production
 
 ### 📖 Technical Guides
+- **[Route Tracking Logic](docs/guides/ROUTE_TRACKING_LOGIC.md)** - How any-unit-any-route system works
+- **[Route Tracking Setup](docs/guides/route-tracking-setup.md)** - Configure route completion tracking
 - **[Geocercas Sync Guide](docs/guides/GEOCERCAS_SYNC_GUIDE.md)** - Geofence import & updates
 - **[Wialon Puerto Setup](docs/guides/WIALON_PUERTO_SETUP_GUIDE.md)** - Configure port notifications
 - **[n8n Security Guide](docs/guides/N8N_SECURITY_GUIDE.md)** - Security best practices
@@ -188,7 +191,8 @@ elam-dashboard/
 │   └── sessions/               # Development session notes
 │
 ├── workflows/                  # Automation workflows (n8n)
-│   ├── ELAM_-_Telegram_Listener_v2_COMPLETE.json  # Event handler
+│   ├── ELAM_-_Telegram_Listener_v3_WITH_ROUTE_TRACKING.json  # Event handler with route tracking
+│   ├── ELAM_-_Weekly_Route_Counter_Reset.json     # Weekly counter reset (Mondays)
 │   ├── ELAM - Wialon to Sheets (cada 3h).json     # Telemetry sync
 │   ├── ELAM - Complete Sync (Units + Geocercas).json
 │   ├── QUICK_SETUP.md          # n8n quick setup

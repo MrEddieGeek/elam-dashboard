@@ -1,0 +1,240 @@
+{
+  "name": "ELAM - Weekly Route Counter Reset",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 * * 1"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "id": "schedule-trigger",
+      "name": "Every Monday 00:00",
+      "notes": "Triggers every Monday at midnight (Mexico City timezone)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log the reset operation start\nconst now = new Date();\nconst weekNumber = Math.ceil((((now - new Date(now.getFullYear(), 0, 1)) / 86400000) + 1) / 7);\n\nreturn {\n  timestamp: now.toISOString().replace('T', ' ').substring(0, 19),\n  week_number: weekNumber,\n  year: now.getFullYear(),\n  action: 'weekly_counter_reset',\n  message: `Resetting weekly route counters for week ${weekNumber}, ${now.getFullYear()}`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 0],
+      "id": "prepare-reset",
+      "name": "Prepare Reset Data"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "status_operativo",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [400, 0],
+      "id": "get-all-units",
+      "name": "Get All Units",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Yv3IPJWrDIRUALZ",
+          "name": "ELAM_Google_Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare batch update for all units\n// Set rutas_semana to 0 for each unit\n\nconst units = $input.all();\nconst updates = [];\n\nfor (const unit of units) {\n  updates.push({\n    unidad: unit.json.Unidad,\n    rutas_semana: 0,\n    old_count: unit.json.rutas_semana || 0\n  });\n}\n\nreturn updates;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 0],
+      "id": "prepare-updates",
+      "name": "Prepare Counter Reset"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "status_operativo",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Unidad": "={{ $json.unidad }}",
+            "rutas_semana": "0"
+          },
+          "matchingColumns": ["Unidad"]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [800, 0],
+      "id": "reset-counters",
+      "name": "Reset All Counters to 0",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Yv3IPJWrDIRUALZ",
+          "name": "ELAM_Google_Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "eventos_log",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $('Prepare Reset Data').item.json.timestamp }}",
+            "unidad": "SISTEMA",
+            "evento_tipo": "reset_semanal",
+            "geocerca": "N/A",
+            "status_anterior": "N/A",
+            "status_nuevo": "N/A",
+            "lat": "",
+            "lng": "",
+            "velocidad": "",
+            "operador": "Sistema Automático",
+            "procesado_por": "Workflow Automático",
+            "notas": "={{ $('Prepare Reset Data').item.json.message }}"
+          },
+          "matchingColumns": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1000, 0],
+      "id": "log-reset",
+      "name": "Log Reset to eventos_log",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Yv3IPJWrDIRUALZ",
+          "name": "ELAM_Google_Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Final summary\nconst resetData = $('Prepare Reset Data').item.json;\nconst unitsUpdated = $('Prepare Counter Reset').all().length;\n\nreturn {\n  success: true,\n  timestamp: resetData.timestamp,\n  week_number: resetData.week_number,\n  year: resetData.year,\n  units_updated: unitsUpdated,\n  message: `Successfully reset ${unitsUpdated} unit counters for week ${resetData.week_number}/${resetData.year}`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 0],
+      "id": "final-summary",
+      "name": "Final Summary"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every Monday 00:00": {
+      "main": [
+        [
+          {
+            "node": "Prepare Reset Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Reset Data": {
+      "main": [
+        [
+          {
+            "node": "Get All Units",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Units": {
+      "main": [
+        [
+          {
+            "node": "Prepare Counter Reset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Counter Reset": {
+      "main": [
+        [
+          {
+            "node": "Reset All Counters to 0",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reset All Counters to 0": {
+      "main": [
+        [
+          {
+            "node": "Log Reset to eventos_log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Reset to eventos_log": {
+      "main": [
+        [
+          {
+            "node": "Final Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Mexico_City"
+  },
+  "versionId": "v1-2025-11-18",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7a96a660d2f07cd7f6804a292881c662de31610290c3d04312d9584802d96c48"
+  },
+  "id": "WEEKLY-RESET-WORKFLOW",
+  "tags": []
+}

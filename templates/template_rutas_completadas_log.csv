@@ -1,0 +1,4 @@
+timestamp,unidad,ruta_id,origen,destino,operador,duracion_horas,semana_iso,mes,año,notas
+2025-11-18 14:30:00,T-005,R-0001,ELAM FAW STEP JAL,KELLOGS QUERETARO,Juan Pérez,6.5,47,11,2025,Ruta completada exitosamente
+2025-11-17 09:15:00,T-001,R-0002,ELAM FAW STEP JAL,MABE SAN LUIS POTOSI,Carlos López,8.2,47,11,2025,
+2025-11-16 16:45:00,T-010,R-0003,ELAM FAW STEP JAL,HONDA CELAYA,Miguel Ángel,4.8,47,11,2025,

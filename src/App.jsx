@@ -62,7 +62,8 @@ const ELAMDashboard = () => {
         proximoMovimiento: row.c[3]?.v || '',
         operador: row.c[4]?.v || '',
         estatus: row.c[5]?.v || '',
-        ultimaActualizacion: row.c[6]?.v || ''
+        ultimaActualizacion: row.c[6]?.v || '',
+        rutasSemana: row.c[7]?.v || 0
       })).filter(row => row.unidad); // Filter empty rows
 
       setData(rows);
