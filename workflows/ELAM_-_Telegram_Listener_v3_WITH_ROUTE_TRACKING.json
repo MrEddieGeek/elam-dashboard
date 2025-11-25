@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "jsCode": "// Obtener datos directamente del webhook\n// Los datos ya vienen como JSON desde Wialon\nconst data = $input.item.json;\n\n// Debug: ver qué recibimos\nconsole.log('Datos recibidos:', JSON.stringify(data, null, 2));\n\n// Validar que tengamos los datos esperados de Wialon\nif (!data.unidad || !data.evento) {\n  // Si no están directamente, pueden estar en 'body'\n  if (data.body) {\n    const bodyData = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;\n    \n    return [{\n      tipo_evento: bodyData.evento,\n      unidad: bodyData.unidad,\n      geocerca: bodyData.geocerca || '',\n      hora: bodyData.hora || new Date().toISOString(),\n      velocidad: bodyData.velocidad || '0',\n      lat: bodyData.lat || '',\n      lng: bodyData.lng || '',\n      ubicacion: bodyData.ubicacion || bodyData.geocerca || '',\n      accion: bodyData.evento?.includes('entrada') ? 'entrada' : bodyData.evento?.includes('salida') ? 'salida' : 'alerta',\n      timestamp: new Date().toISOString()\n    }];\n  }\n  \n  throw new Error('No se encontraron datos de Wialon. Keys recibidos: ' + Object.keys(data).join(', '));\n}\n\n// Si los datos están directamente disponibles\nreturn [{\n  tipo_evento: data.evento,\n  unidad: data.unidad,\n  geocerca: data.geocerca || '',\n  hora: data.hora || new Date().toISOString(),\n  velocidad: data.velocidad || '0',\n  lat: data.lat || '',\n  lng: data.lng || '',\n  ubicacion: data.ubicacion || data.geocerca || '',\n  accion: data.evento?.includes('entrada') ? 'entrada' : data.evento?.includes('salida') ? 'salida' : 'alerta',\n  timestamp: new Date().toISOString()\n}];"
+        "jsCode": "// Obtener datos directamente del webhook\nconst data = $input.item.json;\n\n// Debug: ver qué recibimos\nconsole.log('Datos recibidos:', JSON.stringify(data, null, 2));\n\nlet bodyData = null;\n\n// Validar que tengamos los datos esperados de Wialon\nif (!data.unidad || !data.evento) {\n  // Si no están directamente, pueden estar en 'body'\n  if (data.body) {\n    // Caso especial: Wialon envía JSON como key del body (application/x-www-form-urlencoded)\n    if (typeof data.body === 'object' && !Array.isArray(data.body)) {\n      const bodyKeys = Object.keys(data.body);\n      if (bodyKeys.length > 0) {\n        // El primer key contiene el JSON como string\n        const jsonString = bodyKeys[0];\n        try {\n          bodyData = JSON.parse(jsonString);\n        } catch (e) {\n          console.error('Error parsing body key as JSON:', e);\n          bodyData = data.body;\n        }\n      }\n    } else if (typeof data.body === 'string') {\n      // Si body es string, parsearlo\n      bodyData = JSON.parse(data.body);\n    } else {\n      bodyData = data.body;\n    }\n    \n    if (bodyData && (bodyData.unidad || bodyData.evento)) {\n      return [{\n        tipo_evento: bodyData.evento,\n        unidad: bodyData.unidad,\n        geocerca: bodyData.geocerca || '',\n        hora: bodyData.hora || new Date().toISOString(),\n        velocidad: bodyData.velocidad || '0 km/h',\n        lat: bodyData.lat || '',\n        lng: bodyData.lng || '',\n        ubicacion: bodyData.ubicacion || bodyData.geocerca || '',\n        accion: bodyData.evento?.includes('entrada') ? 'entrada' : bodyData.evento?.includes('salida') ? 'salida' : 'alerta',\n        timestamp: new Date().toISOString()\n      }];\n    }\n  }\n  \n  throw new Error('No se encontraron datos de Wialon. Keys recibidos: ' + Object.keys(data).join(', '));\n}\n\n// Si los datos están directamente disponibles\nreturn [{\n  tipo_evento: data.evento,\n  unidad: data.unidad,\n  geocerca: data.geocerca || '',\n  hora: data.hora || new Date().toISOString(),\n  velocidad: data.velocidad || '0 km/h',\n  lat: data.lat || '',\n  lng: data.lng || '',\n  ubicacion: data.ubicacion || data.geocerca || '',\n  accion: data.evento?.includes('entrada') ? 'entrada' : data.evento?.includes('salida') ? 'salida' : 'alerta',\n  timestamp: new Date().toISOString()\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -45,7 +45,9 @@
           "id": "4Yv3IPJWrDIRUALZ",
           "name": "ELAM_Google_Sheets"
         }
-      }
+      },
+      "continueOnFail": true,
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -79,7 +81,9 @@
           "id": "4Yv3IPJWrDIRUALZ",
           "name": "ELAM_Google_Sheets"
         }
-      }
+      },
+      "continueOnFail": true,
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -113,7 +117,9 @@
           "id": "4Yv3IPJWrDIRUALZ",
           "name": "ELAM_Google_Sheets"
         }
-      }
+      },
+      "continueOnFail": true,
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -276,8 +282,8 @@
             "geocerca": "={{ $('Determinar Nuevo Status').item.json.ubicacion }}",
             "status_anterior": "={{ $('Determinar Nuevo Status').item.json.status_anterior }}",
             "status_nuevo": "={{ $('Determinar Nuevo Status').item.json.nuevo_status }}",
-            "lat": "={{ $('Buscar Geocerca').item.json.lat }}",
-            "lng": "={{ $('Buscar Geocerca').item.json.lng }}",
+            "lat": "={{ $('Parser Wialon').item.json.lat }}",
+            "lng": "={{ $('Parser Wialon').item.json.lng }}",
             "velocidad": "={{ $('Parser Wialon').item.json.velocidad }}",
             "operador": "={{ $('Determinar Nuevo Status').item.json.operador }}",
             "procesado_por": "Automático",
@@ -436,6 +442,35 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skipRouteTracking }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1744, 0],
+      "id": "check-skip-routing",
+      "name": "Should Process Routes?"
+    },
+    {
+      "parameters": {
         "documentId": {
           "__rl": true,
           "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
@@ -458,7 +493,7 @@
       },
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [1744, -200],
+      "position": [1936, -200],
       "id": "check-route-start",
       "name": "Check Route Start",
       "credentials": {
@@ -466,7 +501,9 @@
           "id": "4Yv3IPJWrDIRUALZ",
           "name": "ELAM_Google_Sheets"
         }
-      }
+      },
+      "continueOnFail": true,
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -492,7 +529,7 @@
       },
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [1744, 200],
+      "position": [1936, 200],
       "id": "check-active-route",
       "name": "Check Active Route",
       "credentials": {
@@ -500,17 +537,85 @@
           "id": "4Yv3IPJWrDIRUALZ",
           "name": "ELAM_Google_Sheets"
         }
-      }
+      },
+      "continueOnFail": true,
+      "alwaysOutputData": true
     },
     {
       "parameters": {
-        "jsCode": "// Process route start detection\nconst routerData = $('Route Tracking Router').item.json;\nconst routeData = $input.item.json;\n\n// Check if we found a matching route\nif (!routeData.ruta_id) {\n  // No route found, skip\n  return null;\n}\n\n// Check if this unit already has an active route\n// (prevent starting multiple routes at once)\nconst checkActiveUrl = `https://docs.google.com/spreadsheets/d/1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE/gviz/tq?tqx=out:json&sheet=rutas_activas&tq=select * where A = '${routerData.unidad}'`;\n\n// Note: This is a simplified check. In production, you should use a proper Google Sheets lookup node\n// For now, we'll proceed with the route start\n\n// Route found! Use the ACTUAL unit that triggered the event (not the one in rutas_programadas)\nconst now = new Date();\nconst fechaInicio = now.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });\n\nreturn {\n  unidad: routerData.unidad,  // IMPORTANT: Use actual unit from event, not from rutas_programadas\n  ruta_id: routeData.ruta_id,\n  origen: routeData.origen,\n  destino: routeData.destino,\n  operador: routerData.operador,\n  fecha_inicio: fechaInicio,\n  timestamp_inicio: now.toISOString().replace('T', ' ').substring(0, 19),\n  geocercas_ruta: routeData.geocercas_ruta || ''\n};"
+        "jsCode": "// Process route start detection\nconst routerData = $('Route Tracking Router').item.json;\nconst routeData = $input.item.json;\n\n// Check if we found a matching route\nif (!routeData.ruta_id) {\n  // No route found, skip\n  return null;\n}\n\n// Route found! Use the ACTUAL unit that triggered the event (not the one in rutas_programadas)\n// Note: Duplicate checking is now handled by subsequent nodes\nconst now = new Date();\nconst fechaInicio = now.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });\n\nreturn {\n  unidad: routerData.unidad,  // IMPORTANT: Use actual unit from event, not from rutas_programadas\n  ruta_id: routeData.ruta_id,\n  origen: routeData.origen,\n  destino: routeData.destino,\n  operador: routerData.operador,\n  fecha_inicio: fechaInicio,\n  timestamp_inicio: now.toISOString().replace('T', ' ').substring(0, 19),\n  geocercas_ruta: routeData.geocercas_ruta || ''\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1936, -200],
+      "position": [2128, -200],
       "id": "process-route-start",
       "name": "Process Route Start"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "rutas_activas",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "unidad",
+              "lookupValue": "={{ $json.unidad }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2320, -200],
+      "id": "check-duplicate-route",
+      "name": "Check For Duplicate",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Yv3IPJWrDIRUALZ",
+          "name": "ELAM_Google_Sheets"
+        }
+      },
+      "continueOnFail": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "no-duplicate",
+              "leftValue": "={{ $('Check For Duplicate').item.json.ruta_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2512, -200],
+      "id": "check-no-active-route",
+      "name": "No Active Route?"
     },
     {
       "parameters": {
@@ -518,7 +623,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1936, 200],
+      "position": [2128, 200],
       "id": "process-route-completion",
       "name": "Process Route Completion"
     },
@@ -553,7 +658,7 @@
       },
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [2128, -200],
+      "position": [2704, -200],
       "id": "create-active-route",
       "name": "Create Active Route",
       "credentials": {
@@ -597,7 +702,7 @@
       },
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [2128, 200],
+      "position": [2320, 200],
       "id": "log-completed-route",
       "name": "Log Completed Route",
       "credentials": {
@@ -606,6 +711,42 @@
           "name": "ELAM_Google_Sheets"
         }
       }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "status_operativo",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Unidad",
+              "lookupValue": "={{ $('Process Route Completion').item.json.unidad }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [2512, 200],
+      "id": "read-current-counter",
+      "name": "Read Current Counter",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Yv3IPJWrDIRUALZ",
+          "name": "ELAM_Google_Sheets"
+        }
+      },
+      "continueOnFail": true,
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -623,8 +764,8 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "Unidad": "={{ $json.unidad }}",
-            "rutas_semana": "={{ $('Leer Status Actual').item.json.rutas_semana ? parseInt($('Leer Status Actual').item.json.rutas_semana) + 1 : 1 }}"
+            "Unidad": "={{ $('Process Route Completion').item.json.unidad }}",
+            "rutas_semana": "={{ $('Read Current Counter').item.json.rutas_semana ? parseInt($('Read Current Counter').item.json.rutas_semana) + 1 : 1 }}"
           },
           "matchingColumns": ["Unidad"]
         },
@@ -632,7 +773,7 @@
       },
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [2320, 200],
+      "position": [2704, 200],
       "id": "increment-counter",
       "name": "Increment Weekly Counter",
       "credentials": {
@@ -667,7 +808,7 @@
       },
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
-      "position": [2512, 200],
+      "position": [2896, 200],
       "id": "clear-active-route",
       "name": "Clear Active Route",
       "credentials": {
@@ -772,6 +913,17 @@
       "main": [
         [
           {
+            "node": "Should Process Routes?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Process Routes?": {
+      "main": [
+        [
+          {
             "node": "Check Route Start",
             "type": "main",
             "index": 0
@@ -810,6 +962,28 @@
       "main": [
         [
           {
+            "node": "Check For Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check For Duplicate": {
+      "main": [
+        [
+          {
+            "node": "No Active Route?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Active Route?": {
+      "main": [
+        [
+          {
             "node": "Create Active Route",
             "type": "main",
             "index": 0
@@ -829,6 +1003,17 @@
       ]
     },
     "Log Completed Route": {
+      "main": [
+        [
+          {
+            "node": "Read Current Counter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Current Counter": {
       "main": [
         [
           {

@@ -33,7 +33,7 @@
             },
             {
               "name": "params",
-              "value": "{\"token\":\"5b30e77bacbf13e8d2258fa3f9bf68ad99CBD5C51C552EA1CE515F932F118F6D2A4AD491\"}"
+              "value": "{\"token\":\"5b30e77bacbf13e8d2258fa3f9bf68ad8F43C6FBBA4E6ACAEDB8BC55E9973DDB03FF895C\"}"
             }
           ]
         },
@@ -60,7 +60,7 @@
             },
             {
               "name": "params",
-              "value": "={\"spec\":{\"itemsType\":\"avl_unit\",\"propName\":\"sys_name\",\"propValueMask\":\"*\",\"sortType\":\"sys_name\"},\"force\":1,\"flags\":1025,\"from\":0,\"to\":0}"
+              "value": "={\"spec\":{\"itemsType\":\"avl_unit\",\"propName\":\"sys_name\",\"propValueMask\":\"*\",\"sortType\":\"sys_name\"},\"force\":1,\"flags\":1281,\"from\":0,\"to\":0}"
             },
             {
               "name": "sid",
@@ -96,7 +96,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Procesar datos de cada unidad con detección mejorada de motor\nconst item = $input.item.json;\n\n// Extraer datos relevantes\nconst unidad = item.nm || 'Desconocido';\nconst pos = item.pos || {};\nconst params = pos.p || {};\n\n// Timestamp actual\nconst timestamp = new Date().toISOString();\nconst ultimaActualizacion = pos.t ? new Date(pos.t * 1000).toISOString() : timestamp;\n\n// DETECCIÓN DE ESTADO DEL MOTOR POR INFERENCIA\nlet motorEstado = 'Desconocido';\nconst velocidad = pos.s || 0;\nconst ultimoReporte = pos.t || 0;\nconst tiempoDesdeReporte = Date.now() / 1000 - ultimoReporte; // en segundos\n\n// Método 1: Revisar parámetros directos si existen\nif (params.hasOwnProperty('pwr') || params.hasOwnProperty('power')) {\n  motorEstado = (params.pwr || params.power) > 0 ? 'Encendido' : 'Apagado';\n}\nelse if (params.hasOwnProperty('ign') || params.hasOwnProperty('ignition')) {\n  motorEstado = (params.ign || params.ignition) === 1 ? 'Encendido' : 'Apagado';\n}\nelse if (params.hasOwnProperty('engine_state')) {\n  motorEstado = params.engine_state === 1 ? 'Encendido' : 'Apagado';\n}\n// Método 2: INFERENCIA por velocidad y comportamiento\nelse {\n  if (velocidad > 5) {\n    // Si va a más de 5 km/h, definitivamente está encendido\n    motorEstado = 'Encendido';\n  } else if (velocidad > 0 && velocidad <= 5) {\n    // Movimiento lento, podría estar en maniobras\n    motorEstado = 'Encendido';\n  } else if (velocidad === 0 && tiempoDesdeReporte < 1800) {\n    // Detenido hace menos de 30 min, asumimos apagado\n    motorEstado = 'Apagado';\n  } else {\n    // Sin datos recientes\n    motorEstado = 'Apagado';\n  }\n}\n\n// Determinar evento basado en velocidad y estado\nlet evento = 'Normal';\nif (pos.s >= 5) {\n  evento = 'En movimiento';\n} else if (motorEstado === 'Encendido' && pos.s < 5) {\n  evento = 'Ralentí';\n} else if (motorEstado === 'Apagado') {\n  evento = 'Detenido';\n} else {\n  evento = 'Estacionado';\n}\n\n// Log de parámetros disponibles para debug (opcional, puedes comentar después)\nconsole.log(`Unidad ${unidad}: Parámetros disponibles:`, Object.keys(params));\n\nreturn {\n  timestamp: timestamp,\n  unidad: unidad,\n  lat: pos.y || 0,\n  lng: pos.x || 0,\n  velocidad_kmh: pos.s || 0,\n  motor_estado: motorEstado,\n  combustible_litros: params.fuel_level || params.fuel || 0,\n  odometro_km: params.mileage || params.total_mileage || 0,\n  evento: evento,\n  ultima_actualizacion: ultimaActualizacion\n};"
+        "jsCode": "// Procesar datos de cada unidad con detección mejorada de motor\nconst item = $input.item.json;\n\n// Extraer datos relevantes\nconst unidad = item.nm || 'Desconocido';\nconst pos = item.pos || {};\nconst params = pos.p || {};\n\n// Timestamp actual\nconst timestamp = new Date().toISOString();\nconst ultimaActualizacion = pos.t ? new Date(pos.t * 1000).toISOString() : timestamp;\n\n// DETECCIÓN DE ESTADO DEL MOTOR POR INFERENCIA\nlet motorEstado = 'Desconocido';\nconst velocidad = pos.s || 0;\nconst ultimoReporte = pos.t || 0;\nconst tiempoDesdeReporte = Date.now() / 1000 - ultimoReporte; // en segundos\n\n// Método 1: Revisar parámetros directos si existen\nif (params.hasOwnProperty('pwr') || params.hasOwnProperty('power')) {\n  motorEstado = (params.pwr || params.power) > 0 ? 'Encendido' : 'Apagado';\n}\nelse if (params.hasOwnProperty('ign') || params.hasOwnProperty('ignition')) {\n  motorEstado = (params.ign || params.ignition) === 1 ? 'Encendido' : 'Apagado';\n}\nelse if (params.hasOwnProperty('engine_state')) {\n  motorEstado = params.engine_state === 1 ? 'Encendido' : 'Apagado';\n}\n// Método 2: INFERENCIA por velocidad y comportamiento\nelse {\n  if (velocidad > 5) {\n    // Si va a más de 5 km/h, definitivamente está encendido\n    motorEstado = 'Encendido';\n  } else if (velocidad > 0 && velocidad <= 5) {\n    // Movimiento lento, podría estar en maniobras\n    motorEstado = 'Encendido';\n  } else if (velocidad === 0 && tiempoDesdeReporte < 1800) {\n    // Detenido hace menos de 30 min, asumimos apagado\n    motorEstado = 'Apagado';\n  } else {\n    // Sin datos recientes\n    motorEstado = 'Apagado';\n  }\n}\n\n// Determinar evento basado en velocidad y estado\nlet evento = 'Normal';\nif (pos.s >= 5) {\n  evento = 'En movimiento';\n} else if (motorEstado === 'Encendido' && pos.s < 5) {\n  evento = 'Ralentí';\n} else if (motorEstado === 'Apagado') {\n  evento = 'Detenido';\n} else {\n  evento = 'Estacionado';\n}\n\n// Log de parámetros disponibles para debug (opcional, puedes comentar después)\nconsole.log(`Unidad ${unidad}: Parámetros disponibles:`, Object.keys(params));\n\n// *** EXTRACCIÓN DE OPERADOR DESDE WIALON API ***\nlet operador = null;  // null = no actualizar (preservar valor existente)\n\n// Prioridad 1: Verificar campo drvr (asignación de conductor en Wialon)\nif (item.drvr && item.drvr.n) {\n  operador = item.drvr.n;\n  console.log(`${unidad}: Operador desde Wialon binding: ${operador}`);\n}\n// Prioridad 2: Verificar parámetros de sensor de conductor\nelse if (params.driver_name) {\n  operador = params.driver_name;\n  console.log(`${unidad}: Operador desde sensor driver_name: ${operador}`);\n} else if (params.avl_driver_name) {\n  operador = params.avl_driver_name;\n  console.log(`${unidad}: Operador desde sensor avl_driver_name: ${operador}`);\n}\n\n// Normalizar nombre del operador si se encontró\nif (operador) {\n  operador = operador\n    .trim()\n    .split(' ')\n    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())\n    .join(' ');\n}\n\n// Construir objeto de salida\nconst output = {\n  timestamp: timestamp,\n  unidad: unidad,\n  lat: pos.y || 0,\n  lng: pos.x || 0,\n  velocidad_kmh: pos.s || 0,\n  motor_estado: motorEstado,\n  combustible_litros: params.fuel_level || params.fuel || 0,\n  odometro_km: params.mileage || params.total_mileage || 0,\n  evento: evento,\n  ultima_actualizacion: ultimaActualizacion\n};\n\n// Solo incluir operador si se encontró (preserva entradas manuales si no hay datos de Wialon)\nif (operador !== null) {\n  output.operador = operador;\n}\n\nreturn output;"
       },
       "name": "Procesar Datos",
       "type": "n8n-nodes-base.code",
@@ -296,6 +296,45 @@
       ],
       "id": "2a2a6999-c71e-4d36-9dc1-d1977d9d3ef4",
       "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "unidades_operadores",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "unidad"
+          ]
+        },
+        "options": {}
+      },
+      "name": "Actualizar Operadores",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1040,
+        80
+      ],
+      "id": "operator-sync-node-001",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Yv3IPJWrDIRUALZ",
+          "name": "ELAM_Google_Sheets"
+        }
+      },
+      "continueOnFail": true,
+      "alwaysOutputData": true
     }
   ],
   "pinData": {},
@@ -351,11 +390,27 @@
             "node": "Actualizar Google Sheets",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Actualizar Operadores",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
     },
     "Actualizar Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Operadores": {
       "main": [
         [
           {
