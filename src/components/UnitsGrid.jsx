@@ -2,6 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { StatusBadge } from '@/components/StatusBadge';
+import { SpeedIndicator } from '@/components/SpeedIndicator';
+import { OdometerDisplay } from '@/components/OdometerDisplay';
 import { Truck, MapPin, Activity, User, Clock, Navigation, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
@@ -106,6 +108,13 @@ function UnitCard({ unit, index }) {
             iconBg="bg-green-950/50"
             truncate
           />
+
+          {/* Live Metrics Section - Speed and Odometer */}
+          <div className="border-t border-slate-700/50 pt-3 mt-3 space-y-2">
+            <p className="text-xs text-slate-500 font-medium mb-2">Métricas en Vivo</p>
+            <SpeedIndicator speed={unit.velocidad_kmh} />
+            <OdometerDisplay odometer={unit.odometro_km} />
+          </div>
 
           {/* Próximo Movimiento */}
           {unit.proximoMovimiento && (

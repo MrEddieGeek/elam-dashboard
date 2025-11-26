@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 // Configuration constants
 const SHEET_ID = import.meta.env.VITE_GOOGLE_SHEET_ID || '1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE';
 const SHEET_NAME = 'status_operativo';
+const LIVE_DATA_SHEET = 'live_data';
 const UPDATE_INTERVAL = parseInt(import.meta.env.VITE_UPDATE_INTERVAL) || 120000; // 2 minutes default
 const GOOGLE_SHEETS_JSON_PREFIX = '/*O_o*/\ngoogle.visualization.Query.setResponse(';
 
@@ -21,52 +22,133 @@ const ELAMDashboard = () => {
   const [error, setError] = useState(null);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
 
-  const fetchData = async () => {
+  /**
+   * Helper function to parse Google Sheets API response
+   * Handles Google's JSONP wrapper format
+   */
+  const parseGoogleSheetsResponse = (text) => {
+    let jsonText = text;
+    if (text.startsWith(GOOGLE_SHEETS_JSON_PREFIX)) {
+      // Remove the wrapper: /*O_o*/\ngoogle.visualization.Query.setResponse( ... );
+      jsonText = text.substring(GOOGLE_SHEETS_JSON_PREFIX.length);
+      jsonText = jsonText.substring(0, jsonText.lastIndexOf(');'));
+    } else if (text.includes('google.visualization.Query.setResponse(')) {
+      // Fallback for slight format variations
+      const startIdx = text.indexOf('({');
+      const endIdx = text.lastIndexOf('});');
+      if (startIdx !== -1 && endIdx !== -1) {
+        jsonText = text.substring(startIdx + 1, endIdx + 1);
+      }
+    }
+    return JSON.parse(jsonText);
+  };
+
+  /**
+   * Fetch status_operativo sheet data
+   */
+  const fetchStatusData = async () => {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error fetching status_operativo: ${response.status}`);
+    }
+
+    const text = await response.text();
+    const json = parseGoogleSheetsResponse(text);
+
+    if (!json.table || !json.table.rows) {
+      throw new Error('Invalid data structure from status_operativo sheet');
+    }
+
+    return json.table.rows.map(row => ({
+      unidad: row.c[0]?.v || '',
+      actividad: row.c[1]?.v || '',
+      ubicacion: row.c[2]?.v || '',
+      proximoMovimiento: row.c[3]?.v || '',
+      operador: row.c[4]?.v || '',
+      estatus: row.c[5]?.v || '',
+      ultimaActualizacion: row.c[6]?.v || '',
+      rutasSemana: row.c[7]?.v || 0
+    })).filter(row => row.unidad); // Filter empty rows
+  };
+
+  /**
+   * Fetch live_data sheet data
+   */
+  const fetchLiveData = async () => {
     try {
-      setError(null);
-      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${LIVE_DATA_SHEET}`;
       const response = await fetch(url);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        console.warn(`Could not fetch live_data: ${response.status}`);
+        return [];
       }
 
       const text = await response.text();
+      const json = parseGoogleSheetsResponse(text);
 
-      // More robust parsing - handle Google's JSON wrapper format
-      let jsonText = text;
-      if (text.startsWith(GOOGLE_SHEETS_JSON_PREFIX)) {
-        // Remove the wrapper: /*O_o*/\ngoogle.visualization.Query.setResponse( ... );
-        jsonText = text.substring(GOOGLE_SHEETS_JSON_PREFIX.length);
-        jsonText = jsonText.substring(0, jsonText.lastIndexOf(');'));
-      } else if (text.includes('google.visualization.Query.setResponse(')) {
-        // Fallback for slight format variations
-        const startIdx = text.indexOf('({');
-        const endIdx = text.lastIndexOf('});');
-        if (startIdx !== -1 && endIdx !== -1) {
-          jsonText = text.substring(startIdx + 1, endIdx + 1);
-        }
-      }
-
-      const json = JSON.parse(jsonText);
-
-      // Validate response structure
       if (!json.table || !json.table.rows) {
-        throw new Error('Invalid data structure received from Google Sheets');
+        console.warn('Invalid data structure from live_data sheet');
+        return [];
       }
 
-      const rows = json.table.rows.map(row => ({
-        unidad: row.c[0]?.v || '',
-        actividad: row.c[1]?.v || '',
-        ubicacion: row.c[2]?.v || '',
-        proximoMovimiento: row.c[3]?.v || '',
-        operador: row.c[4]?.v || '',
-        estatus: row.c[5]?.v || '',
-        ultimaActualizacion: row.c[6]?.v || '',
-        rutasSemana: row.c[7]?.v || 0
-      })).filter(row => row.unidad); // Filter empty rows
+      return json.table.rows.map(row => ({
+        unidad: row.c[1]?.v || '',  // Column 1: unidad
+        velocidad_kmh: row.c[4]?.v || '0',  // Column 4: velocidad_kmh
+        odometro_km: row.c[7]?.v || '0',  // Column 7: odometro_km
+        motor_estado: row.c[5]?.v || '',  // Column 5: motor_estado
+        combustible_litros: row.c[6]?.v || '0',  // Column 6: combustible_litros
+        lat: row.c[2]?.v || '',  // Column 2: lat
+        lng: row.c[3]?.v || ''   // Column 3: lng
+      })).filter(row => row.unidad);
+    } catch (error) {
+      console.warn('Error fetching live_data, continuing without live metrics:', error);
+      return [];
+    }
+  };
 
-      setData(rows);
+  /**
+   * Join status and live data by unit ID
+   */
+  const joinDataByUnit = (statusData, liveData) => {
+    // Create a Map for fast lookup of live data by unit ID
+    const liveDataMap = new Map(liveData.map(item => [item.unidad, item]));
+
+    // Merge status data with corresponding live data
+    return statusData.map(statusItem => {
+      const liveItem = liveDataMap.get(statusItem.unidad);
+      return {
+        ...statusItem,
+        // Add live data fields (or defaults if not found)
+        velocidad_kmh: liveItem?.velocidad_kmh || '0',
+        odometro_km: liveItem?.odometro_km || '0',
+        motor_estado: liveItem?.motor_estado || '',
+        combustible_litros: liveItem?.combustible_litros || '0',
+        lat: liveItem?.lat || '',
+        lng: liveItem?.lng || ''
+      };
+    });
+  };
+
+  /**
+   * Main data fetching function - fetches both sheets and merges them
+   */
+  const fetchData = async () => {
+    try {
+      setError(null);
+
+      // Fetch both sheets in parallel for performance
+      const [statusData, liveData] = await Promise.all([
+        fetchStatusData(),
+        fetchLiveData()
+      ]);
+
+      // Join the data by unit ID
+      const mergedData = joinDataByUnit(statusData, liveData);
+
+      setData(mergedData);
       setLastUpdate(new Date());
       setLoading(false);
     } catch (error) {
