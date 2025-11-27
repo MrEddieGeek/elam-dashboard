@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Truck, MapPin, Wrench, AlertCircle, Package, Clock } from 'lucide-react';
+import { Truck, MapPin, Wrench, AlertCircle, Package, Clock, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -39,8 +39,13 @@ export function KPICards({ data = [], lastUpdate }) {
     u.estatus?.toLowerCase().includes('esperando')
   ).length;
 
-  // Último evento (unidad con actualización más reciente)
-  const ultimoEvento = data.length > 0 ? data[0] : null;
+  // Total routes completed this week across entire fleet
+  const totalRutasSemana = data.reduce((sum, unit) => {
+    const rutas = typeof unit.rutasSemana === 'number' && !isNaN(unit.rutasSemana)
+      ? unit.rutasSemana
+      : 0;
+    return sum + rutas;
+  }, 0);
 
   // Alertas (unidades sin actividad > 6 horas - simplificado por ahora)
   const alertas = 0; // TODO: Implementar lógica de alertas basada en timestamps
@@ -92,14 +97,13 @@ export function KPICards({ data = [], lastUpdate }) {
       borderColor: 'border-orange-700',
     },
     {
-      title: 'Último Evento',
-      value: ultimoEvento?.unidad || '--',
-      subtitle: ultimoEvento?.ubicacion ? ultimoEvento.ubicacion.substring(0, 30) + '...' : 'Sin datos',
-      icon: Clock,
-      color: 'text-purple-400',
-      bgColor: 'bg-purple-950/50',
-      borderColor: 'border-purple-700',
-      isText: true,
+      title: 'Rutas de la Semana',
+      value: totalRutasSemana,
+      subtitle: `Completadas por ${total} ${total === 1 ? 'unidad' : 'unidades'}`,
+      icon: TrendingUp,
+      color: 'text-emerald-400',
+      bgColor: 'bg-emerald-950/50',
+      borderColor: 'border-emerald-700',
     },
   ];
 
