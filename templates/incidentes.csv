@@ -1,0 +1,2 @@
+id,timestamp,unidad,tipo_incidente,severidad,ubicacion_lat,ubicacion_lng,descripcion,status
+1,2025-12-01 10:30:00,T-001,trafico,media,19.4326,-99.1332,Tráfico pesado en autopista,RESUELTO

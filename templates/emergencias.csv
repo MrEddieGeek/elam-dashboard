@@ -1,0 +1,2 @@
+id,timestamp_inicio,unidad,operador,ubicacion_lat,ubicacion_lng,status,despachador_asignado,timestamp_resolucion,llamada_realizada
+EMG-1733068200,2025-12-01 10:30:00,T-001,Juan Pérez,19.4326,-99.1332,RESUELTA,María García,2025-12-01 10:35:00,FALSE

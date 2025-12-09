@@ -148,11 +148,18 @@ python3 scripts/import_geocercas.py
 
 ## 📚 Documentation
 
+### 👋 Start Here
+- **[Spanish Client Brief](docs/RESUMEN_CLIENTE.md)** - Executive summary for client presentations (Spanish) 🆕
+- **[Complete Project Docs](docs/project/ELAM_Project_Documentation.md)** - Comprehensive project overview
+- **[Development History](docs/project/DEVELOPMENT_HISTORY.md)** - Timeline and development phases 🆕
+
 ### 🚀 Getting Started
 - **[Setup Guide](docs/setup/SETUP_GUIDE.md)** - Complete installation instructions
 - **[Deployment Guide](docs/setup/DEPLOYMENT_GUIDE.md)** - Deploy to production
 
 ### 📖 Technical Guides
+- **[Architecture Diagrams](docs/technical/ARCHITECTURE_DIAGRAM.md)** - System architecture with Mermaid diagrams 🆕
+- **[Push Notifications Plan](docs/technical/PUSH_NOTIFICATIONS_PLAN.md)** - SSE implementation (fully planned) 🆕
 - **[Route Tracking Logic](docs/guides/ROUTE_TRACKING_LOGIC.md)** - How any-unit-any-route system works
 - **[Route Tracking Setup](docs/guides/route-tracking-setup.md)** - Configure route completion tracking
 - **[Geocercas Sync Guide](docs/guides/GEOCERCAS_SYNC_GUIDE.md)** - Geofence import & updates
@@ -164,13 +171,20 @@ python3 scripts/import_geocercas.py
 - **[GitHub Upload Checklist](docs/checklists/GITHUB_UPLOAD_CHECKLIST.md)** - Pre-commit security checks
 
 ### 📂 Project Documentation
-- **[Complete Project Docs](docs/project/ELAM_Project_Documentation.md)** - Full project documentation
 - **[Fixes Summary](docs/project/FIXES_SUMMARY.md)** - Recent bug fixes and changes
 - **[GitHub Preparation](docs/project/GITHUB_PREPARATION_SUMMARY.md)** - Repository setup notes
+
+### 🤖 Telegram Bot Documentation
+- **[Implementation Tracker](dispatch/IMPLEMENTATION_TRACKER.md)** - 5-phase implementation roadmap with status
+- **[Phase 2 Complete](dispatch/README_PHASE_2_COMPLETE.md)** - Driver bot features
+- See `dispatch/` folder for detailed bot documentation (11 files)
 
 ### 🔧 Workflow Documentation
 - **[Workflow Quick Setup](workflows/QUICK_SETUP.md)** - n8n quick setup
 - **[Geocercas Sync README](workflows/GEOCERCAS_SYNC_README.md)** - Geofence workflow details
+
+### 📦 Archive
+- **[Session Summaries](docs/archive/)** - Historical development session notes
 
 ---
 
@@ -184,11 +198,25 @@ elam-dashboard/
 │
 ├── docs/                       # 📚 All documentation
 │   ├── CLAUDE.md               # AI assistant context
+│   ├── RESUMEN_CLIENTE.md      # Spanish client brief (NEW)
 │   ├── setup/                  # Setup and deployment guides
-│   ├── guides/                 # Technical guides
+│   ├── guides/                 # Technical guides (7 files)
 │   ├── checklists/             # Testing and validation
 │   ├── project/                # Project documentation
-│   └── sessions/               # Development session notes
+│   │   ├── ELAM_Project_Documentation.md
+│   │   ├── DEVELOPMENT_HISTORY.md  # Development timeline (NEW)
+│   │   ├── FIXES_SUMMARY.md
+│   │   └── GITHUB_PREPARATION_SUMMARY.md
+│   ├── technical/              # Technical implementation docs (NEW)
+│   │   ├── ARCHITECTURE_DIAGRAM.md  # Mermaid diagrams
+│   │   └── PUSH_NOTIFICATIONS_PLAN.md  # SSE implementation
+│   └── archive/                # Historical session notes (NEW)
+│
+├── dispatch/                   # Telegram bot documentation (11 files)
+│   ├── IMPLEMENTATION_TRACKER.md  # 5-phase roadmap with status
+│   ├── PHASE_1_START_HERE.md
+│   ├── PHASE_2_IMPORT_GUIDE.md
+│   └── ... (implementation guides)
 │
 ├── workflows/                  # Automation workflows (n8n)
 │   ├── ELAM_-_Telegram_Listener_v3_WITH_ROUTE_TRACKING.json  # Event handler with route tracking

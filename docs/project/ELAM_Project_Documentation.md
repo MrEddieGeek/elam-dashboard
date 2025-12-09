@@ -627,7 +627,28 @@ The ELAM Fleet Management System is **85% complete** with core functionality wor
 
 ---
 
-*Document Version: 1.0*  
-*Last Updated: November 2, 2025*  
-*Author: Claude (Anthropic AI)*  
+## Additional Documentation
+
+### 📚 Related Documents
+
+**Project Documentation:**
+- **[Development History](DEVELOPMENT_HISTORY.md)** - Complete development timeline and session summaries
+- **[Spanish Client Brief](../RESUMEN_CLIENTE.md)** - Executive summary for client presentations
+
+**Technical Documentation:**
+- **[Architecture Diagrams](../technical/ARCHITECTURE_DIAGRAM.md)** - System architecture with Mermaid diagrams
+- **[Push Notifications Plan](../technical/PUSH_NOTIFICATIONS_PLAN.md)** - Server-Sent Events implementation (fully planned)
+
+**Bot Documentation:**
+- **[Telegram Bot Implementation Tracker](../../dispatch/IMPLEMENTATION_TRACKER.md)** - 5-phase roadmap with status
+- See `dispatch/` folder for complete bot documentation (11 files)
+
+**Historical Records:**
+- **[Session Summaries](../archive/)** - Detailed development session notes
+
+---
+
+*Document Version: 2.0*
+*Last Updated: December 9, 2025*
+*Author: Claude (Anthropic AI)*
 *Client: ELAM Logistics*

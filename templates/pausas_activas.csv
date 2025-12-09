@@ -1,0 +1,2 @@
+unidad,tipo_pausa,hora_inicio,duracion_estimada,ubicacion_lat,ubicacion_lng,activa,hora_fin_real
+T-001,bano,2025-12-01 10:30:00,10,19.4326,-99.1332,FALSE,2025-12-01 10:40:00

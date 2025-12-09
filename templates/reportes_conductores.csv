@@ -1,0 +1,2 @@
+id,timestamp,telegram_user_id,unidad,operador,tipo_reporte,ubicacion_lat,ubicacion_lng,tiempo_estimado,status,notas
+1,2025-12-01 10:30:00,123456789,T-001,Juan Pérez,pausa_bano,19.4326,-99.1332,10,COMPLETADO,Ejemplo de reporte

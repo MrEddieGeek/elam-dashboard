@@ -1,0 +1,1508 @@
+{
+  "name": "ELAM - Telegram Bot Conductores",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ]
+      },
+      "id": "telegram-trigger-1",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "telegram-driver-bot",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CONDUCTORES_CREDENTIAL_ID",
+          "name": "Telegram Bot Conductores"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract user info from Telegram message or callback query\nconst userId = $json.message?.from?.id || $json.callback_query?.from?.id;\nconst chatId = $json.message?.chat?.id || $json.callback_query?.message?.chat?.id;\nconst username = $json.message?.from?.username || $json.callback_query?.from?.username;\nconst messageText = $json.message?.text || '';\nconst callbackData = $json.callback_query?.data || '';\nconst messageId = $json.callback_query?.message?.message_id || null;\n\nreturn {\n  json: {\n    user_id: userId,\n    chat_id: chatId,\n    username: username ? `@${username}` : 'Sin username',\n    message_text: messageText,\n    callback_data: callbackData,\n    message_id: messageId,\n    full_message: $json\n  }\n};"
+      },
+      "id": "get-user-info",
+      "name": "Get User Info",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "user_mapping",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "telegram_id",
+              "lookupValue": "={{ $json.user_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "lookup-user",
+      "name": "Lookup User",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        680,
+        300
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets ELAM"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.rol }}",
+              "operation": "equals",
+              "value2": "conductor"
+            }
+          ]
+        }
+      },
+      "id": "validate-role",
+      "name": "User Authorized?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Get User Info').item.json.chat_id }}",
+        "text": "\u274c *Acceso No Autorizado*\n\nLo siento, no tienes permiso para usar este bot.\n\nContacta al administrador si crees que esto es un error.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "unauthorized-message",
+      "name": "Send Unauthorized Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        480
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CONDUCTORES_CREDENTIAL_ID",
+          "name": "Telegram Bot Conductores"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "output": "multipleOutputs",
+        "rules": {
+          "rules": [
+            {
+              "outputKey": "start",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "combinator": "or",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Get User Info').item.json.message_text }}",
+                    "rightValue": "/start",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "leftValue": "={{ $('Get User Info').item.json.callback_data }}",
+                    "rightValue": "start",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "menu_pausas",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Get User Info').item.json.callback_data }}",
+                    "rightValue": "menu_pausas",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "process_pausa",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Get User Info').item.json.callback_data }}",
+                    "rightValue": "pausa_",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "menu_incidentes",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Get User Info').item.json.callback_data }}",
+                    "rightValue": "menu_incidentes",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "process_incidente",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Get User Info').item.json.callback_data }}",
+                    "rightValue": "incidente_",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "emergencia",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Get User Info').item.json.callback_data }}",
+                    "rightValue": "emergencia",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "reanudar_pausa",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Get User Info').item.json.callback_data }}",
+                    "rightValue": "reanudar_pausa",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "reportar_ubicacion",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Get User Info').item.json.callback_data }}",
+                    "rightValue": "reportar_ubicacion",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "outputKey": "ayuda",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Get User Info').item.json.callback_data }}",
+                    "rightValue": "ayuda",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "fallbackOutput": "extra"
+      },
+      "id": "route-handler",
+      "name": "Route Handler",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        1120,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Get User Info').item.json.chat_id }}",
+        "text": "=\ud83d\ude9b *Bienvenido al Sistema ELAM Fleet*\n\n\ud83d\udc64 Conductor: {{ $('Lookup User').item.json.nombre }}\n\ud83d\ude9a Unidad: {{ $('Lookup User').item.json.unidad }}\n\n\ud83d\udcf1 Usa los botones para reportar:",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "reply_markup": {
+            "value": {
+              "inline_keyboard": [
+                [
+                  {
+                    "text": "\ud83d\udccd Reportar Ubicaci\u00f3n",
+                    "callback_data": "reportar_ubicacion"
+                  }
+                ],
+                [
+                  {
+                    "text": "\u23f8\ufe0f Registrar Pausa",
+                    "callback_data": "menu_pausas"
+                  }
+                ],
+                [
+                  {
+                    "text": "\u26a0\ufe0f Reportar Incidente",
+                    "callback_data": "menu_incidentes"
+                  }
+                ],
+                [
+                  {
+                    "text": "\ud83c\udd98 EMERGENCIA",
+                    "callback_data": "emergencia"
+                  }
+                ],
+                [
+                  {
+                    "text": "\u2139\ufe0f Ayuda",
+                    "callback_data": "ayuda"
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      },
+      "id": "show-main-menu",
+      "name": "Show Main Menu",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1340,
+        -100
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CONDUCTORES_CREDENTIAL_ID",
+          "name": "Telegram Bot Conductores"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "editMessageText",
+        "chatId": "={{ $('Get User Info').item.json.chat_id }}",
+        "messageId": "={{ $('Get User Info').item.json.message_id }}",
+        "text": "\u23f8\ufe0f *Selecciona el tipo de pausa:*",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "reply_markup": {
+            "value": {
+              "inline_keyboard": [
+                [
+                  {
+                    "text": "\ud83d\udebb Parada al ba\u00f1o",
+                    "callback_data": "pausa_bano"
+                  }
+                ],
+                [
+                  {
+                    "text": "\u26fd Combustible",
+                    "callback_data": "pausa_combustible"
+                  }
+                ],
+                [
+                  {
+                    "text": "\ud83c\udf7d\ufe0f Comida",
+                    "callback_data": "pausa_comida"
+                  }
+                ],
+                [
+                  {
+                    "text": "\ud83d\ude34 Descanso obligatorio",
+                    "callback_data": "pausa_descanso"
+                  }
+                ],
+                [
+                  {
+                    "text": "\u25c0\ufe0f Volver",
+                    "callback_data": "start"
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      },
+      "id": "show-pause-menu",
+      "name": "Show Pause Menu",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1340,
+        20
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CONDUCTORES_CREDENTIAL_ID",
+          "name": "Telegram Bot Conductores"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const callbackData = $('Get User Info').item.json.callback_data;\nconst tipoPausa = callbackData.replace('pausa_', '');\n\nconst duraciones = {\n  'bano': 10,\n  'combustible': 15,\n  'comida': 30,\n  'descanso': 120\n};\n\nconst nombres = {\n  'bano': { emoji: '\ud83d\udebb', nombre: 'Parada al ba\u00f1o' },\n  'combustible': { emoji: '\u26fd', nombre: 'Combustible' },\n  'comida': { emoji: '\ud83c\udf7d\ufe0f', nombre: 'Comida' },\n  'descanso': { emoji: '\ud83d\ude34', nombre: 'Descanso obligatorio' }\n};\n\nconst userData = $('Lookup User').item.json;\nconst now = new Date();\n\nreturn {\n  json: {\n    // User info\n    telegram_user_id: $('Get User Info').item.json.user_id,\n    unidad: userData.unidad,\n    operador: userData.nombre,\n    telefono: userData.telefono,\n    \n    // Pause info\n    tipo_pausa: tipoPausa,\n    duracion_estimada: duraciones[tipoPausa],\n    emoji: nombres[tipoPausa].emoji,\n    nombre_pausa: nombres[tipoPausa].nombre,\n    \n    // Timestamps\n    timestamp_inicio: now.toISOString(),\n    hora_inicio_formatted: now.toLocaleString('es-MX', {timeZone: 'America/Mexico_City'}),\n    \n    // For sheets and response\n    activa: true,\n    chat_id: $('Get User Info').item.json.chat_id\n  }\n};"
+      },
+      "id": "process-pause-data",
+      "name": "Process Pause Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "pausas_activas",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "unidad": "={{ $json.unidad }}",
+            "tipo_pausa": "={{ $json.tipo_pausa }}",
+            "hora_inicio": "={{ $json.timestamp_inicio }}",
+            "duracion_estimada": "={{ $json.duracion_estimada }}",
+            "ubicacion_lat": "",
+            "ubicacion_lng": "",
+            "activa": "TRUE",
+            "hora_fin_real": ""
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "save-pausas-activas",
+      "name": "Save to pausas_activas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1560,
+        100
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets ELAM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "reportes_conductores",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.unidad }}-{{ Date.now() }}",
+            "timestamp": "={{ $json.timestamp_inicio }}",
+            "telegram_user_id": "={{ $json.telegram_user_id }}",
+            "unidad": "={{ $json.unidad }}",
+            "operador": "={{ $json.operador }}",
+            "tipo_reporte": "=pausa_{{ $json.tipo_pausa }}",
+            "ubicacion_lat": "",
+            "ubicacion_lng": "",
+            "tiempo_estimado": "={{ $json.duracion_estimada }}",
+            "status": "ACTIVO",
+            "notas": "={{ $json.nombre_pausa }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "log-reportes-conductores",
+      "name": "Log to reportes_conductores",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1560,
+        220
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets ELAM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=\u2705 {{ $json.emoji }} *{{ $json.nombre_pausa }} registrada*\n\n\u23f1\ufe0f Duraci\u00f3n estimada: *{{ $json.duracion_estimada }} minutos*\n\ud83d\udd50 Hora: {{ $json.hora_inicio_formatted }}\n\ud83d\udccd Ubicaci\u00f3n guardada\n\n\u26a0\ufe0f No olvides marcar cuando reanudes",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "reply_markup": {
+            "value": {
+              "inline_keyboard": [
+                [
+                  {
+                    "text": "\u2705 Reanudar viaje",
+                    "callback_data": "reanudar_pausa"
+                  }
+                ],
+                [
+                  {
+                    "text": "\u25c0\ufe0f Men\u00fa Principal",
+                    "callback_data": "start"
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      },
+      "id": "confirm-pause",
+      "name": "Confirm Pause Registered",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1780,
+        160
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CONDUCTORES_CREDENTIAL_ID",
+          "name": "Telegram Bot Conductores"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "editMessageText",
+        "chatId": "={{ $('Get User Info').item.json.chat_id }}",
+        "messageId": "={{ $('Get User Info').item.json.message_id }}",
+        "text": "\u26a0\ufe0f *Selecciona el tipo de incidente:*",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "reply_markup": {
+            "value": {
+              "inline_keyboard": [
+                [
+                  {
+                    "text": "\ud83d\ude97 Tr\u00e1fico pesado",
+                    "callback_data": "incidente_trafico"
+                  }
+                ],
+                [
+                  {
+                    "text": "\ud83d\udea7 Desv\u00edo por obra",
+                    "callback_data": "incidente_obra"
+                  }
+                ],
+                [
+                  {
+                    "text": "\ud83e\udea7 Desv\u00edo por manifestaci\u00f3n",
+                    "callback_data": "incidente_manifestacion"
+                  }
+                ],
+                [
+                  {
+                    "text": "\ud83c\udf27\ufe0f Clima adverso",
+                    "callback_data": "incidente_clima"
+                  }
+                ],
+                [
+                  {
+                    "text": "\ud83d\udd27 Falla mec\u00e1nica menor",
+                    "callback_data": "incidente_mecanica"
+                  }
+                ],
+                [
+                  {
+                    "text": "\ud83d\udcdd Otro",
+                    "callback_data": "incidente_otro"
+                  }
+                ],
+                [
+                  {
+                    "text": "\u25c0\ufe0f Volver",
+                    "callback_data": "start"
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      },
+      "id": "show-incident-menu",
+      "name": "Show Incident Menu",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1340,
+        340
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CONDUCTORES_CREDENTIAL_ID",
+          "name": "Telegram Bot Conductores"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const callbackData = $('Get User Info').item.json.callback_data;\nconst tipoIncidente = callbackData.replace('incidente_', '');\n\nconst nombres = {\n  'trafico': { emoji: '\ud83d\ude97', nombre: 'Tr\u00e1fico pesado', severidad: 'media' },\n  'obra': { emoji: '\ud83d\udea7', nombre: 'Desv\u00edo por obra', severidad: 'media' },\n  'manifestacion': { emoji: '\ud83e\udea7', nombre: 'Desv\u00edo por manifestaci\u00f3n', severidad: 'alta' },\n  'clima': { emoji: '\ud83c\udf27\ufe0f', nombre: 'Clima adverso', severidad: 'alta' },\n  'mecanica': { emoji: '\ud83d\udd27', nombre: 'Falla mec\u00e1nica menor', severidad: 'media' },\n  'otro': { emoji: '\ud83d\udcdd', nombre: 'Otro', severidad: 'baja' }\n};\n\nconst userData = $('Lookup User').item.json;\nconst now = new Date();\nconst incidentInfo = nombres[tipoIncidente] || nombres['otro'];\n\nreturn {\n  json: {\n    // User info\n    telegram_user_id: $('Get User Info').item.json.user_id,\n    unidad: userData.unidad,\n    operador: userData.nombre,\n    telefono: userData.telefono,\n    \n    // Incident info\n    tipo_incidente: tipoIncidente,\n    emoji: incidentInfo.emoji,\n    nombre_incidente: incidentInfo.nombre,\n    severidad: incidentInfo.severidad,\n    \n    // Timestamps\n    timestamp: now.toISOString(),\n    timestamp_formatted: now.toLocaleString('es-MX', {timeZone: 'America/Mexico_City'}),\n    \n    // For response\n    chat_id: $('Get User Info').item.json.chat_id,\n    id: `INC-${Date.now()}`\n  }\n};"
+      },
+      "id": "process-incident-data",
+      "name": "Process Incident Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "incidentes",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "unidad": "={{ $json.unidad }}",
+            "tipo_incidente": "={{ $json.tipo_incidente }}",
+            "severidad": "={{ $json.severidad }}",
+            "ubicacion_lat": "",
+            "ubicacion_lng": "",
+            "descripcion": "={{ $json.nombre_incidente }}",
+            "status": "ACTIVO"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "save-incidentes",
+      "name": "Save to incidentes",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1560,
+        420
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets ELAM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=\u2705 {{ $json.emoji }} *Incidente Reportado*\n\n\ud83d\udcdd Tipo: {{ $json.nombre_incidente }}\n\u26a0\ufe0f Severidad: {{ $json.severidad }}\n\ud83d\ude9b Unidad: {{ $json.unidad }}\n\ud83d\udc64 Operador: {{ $json.operador }}\n\ud83d\udd50 Hora: {{ $json.timestamp_formatted }}\n\n\u2709\ufe0f Despacho ha sido notificado\n\ud83d\udcde Te contactar\u00e1n si necesitan m\u00e1s informaci\u00f3n",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "reply_markup": {
+            "value": {
+              "inline_keyboard": [
+                [
+                  {
+                    "text": "\u25c0\ufe0f Men\u00fa Principal",
+                    "callback_data": "start"
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      },
+      "id": "confirm-incident",
+      "name": "Confirm Incident Reported",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1780,
+        480
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CONDUCTORES_CREDENTIAL_ID",
+          "name": "Telegram Bot Conductores"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const userData = $('Lookup User').item.json;\nconst now = new Date();\nconst emergencyId = `EMG-${Date.now()}`;\n\nreturn {\n  json: {\n    // Emergency ID\n    id: emergencyId,\n    \n    // User info\n    telegram_user_id: $('Get User Info').item.json.user_id,\n    unidad: userData.unidad,\n    operador: userData.nombre,\n    telefono: userData.telefono,\n    \n    // Timestamps\n    timestamp_inicio: now.toISOString(),\n    timestamp_formatted: now.toLocaleString('es-MX', {timeZone: 'America/Mexico_City'}),\n    \n    // Status\n    status: 'ACTIVA',\n    \n    // For response\n    chat_id: $('Get User Info').item.json.chat_id\n  }\n};"
+      },
+      "id": "process-emergency",
+      "name": "Process Emergency",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "emergencias",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "timestamp_inicio": "={{ $json.timestamp_inicio }}",
+            "unidad": "={{ $json.unidad }}",
+            "operador": "={{ $json.operador }}",
+            "ubicacion_lat": "",
+            "ubicacion_lng": "",
+            "status": "ACTIVA",
+            "despachador_asignado": "",
+            "timestamp_resolucion": "",
+            "llamada_realizada": "FALSE"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "save-emergencias",
+      "name": "Save to emergencias",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1560,
+        660
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets ELAM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=\ud83d\udea8 *EMERGENCIA ACTIVADA*\n\n\u2705 Despacho notificado\n\ud83d\udcde Te contactar\u00e1n en breve\n\ud83d\udccd Ubicaci\u00f3n compartida\n\nMant\u00e9n la calma, ayuda en camino.\n\n\ud83c\udd94 ID: {{ $json.id }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "reply_markup": {
+            "value": {
+              "inline_keyboard": [
+                [
+                  {
+                    "text": "\u25c0\ufe0f Men\u00fa Principal",
+                    "callback_data": "start"
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      },
+      "id": "confirm-emergency",
+      "name": "Confirm Emergency Activated",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1780,
+        660
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CONDUCTORES_CREDENTIAL_ID",
+          "name": "Telegram Bot Conductores"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Get User Info').item.json.chat_id }}",
+        "text": "\u2139\ufe0f *Sistema ELAM Fleet - Ayuda*\n\n*Comandos disponibles:*\n\n/start - Ver men\u00fa principal\n/pausa - Registrar pausa r\u00e1pida\n/ayuda - Ver esta ayuda\n\n*Funciones:*\n\n\ud83d\udccd *Reportar Ubicaci\u00f3n*\nComparte tu ubicaci\u00f3n actual\n\n\u23f8\ufe0f *Registrar Pausa*\nRegistra pausas para:\n\u2022 Ba\u00f1o\n\u2022 Combustible\n\u2022 Comida\n\u2022 Descanso\n\n\u26a0\ufe0f *Reportar Incidente*\nReporta:\n\u2022 Tr\u00e1fico\n\u2022 Obras\n\u2022 Manifestaciones\n\u2022 Clima adverso\n\u2022 Problemas mec\u00e1nicos\n\n\ud83c\udd98 *EMERGENCIA*\nUsa solo en caso de emergencia real.\nDespacho ser\u00e1 notificado inmediatamente.\n\n\ud83d\udcde *Contacto:*\nDespacho: [N\u00famero de contacto]\n\n_Sistema v2.0 - ELAM Logistics_",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "reply_markup": {
+            "value": {
+              "inline_keyboard": [
+                [
+                  {
+                    "text": "\u25c0\ufe0f Men\u00fa Principal",
+                    "callback_data": "start"
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      },
+      "id": "show-help",
+      "name": "Show Help",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1340,
+        780
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CONDUCTORES_CREDENTIAL_ID",
+          "name": "Telegram Bot Conductores"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Find and close the most recent active pause for this unit\nconst userData = $('Lookup User').item.json;\nconst unidad = userData.unidad;\nconst now = new Date();\n\nreturn {\n  json: {\n    unidad: unidad,\n    hora_fin_real: now.toISOString(),\n    hora_fin_formatted: now.toLocaleString('es-MX', {timeZone: 'America/Mexico_City'}),\n    chat_id: $('Get User Info').item.json.chat_id,\n    operador: userData.nombre\n  }\n};"
+      },
+      "id": "process-resume-pause",
+      "name": "Process Resume Pause",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        900
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "pausas_activas",
+          "mode": "name"
+        },
+        "options": {
+          "filters": {
+            "filterType": "and",
+            "conditions": [
+              {
+                "column": "unidad",
+                "operator": "equals",
+                "value": "={{ $json.unidad }}"
+              },
+              {
+                "column": "activa",
+                "operator": "equals",
+                "value": "TRUE"
+              }
+            ]
+          }
+        }
+      },
+      "id": "read-active-pauses",
+      "name": "Find Active Pause",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1560,
+        900
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets ELAM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "pausas_activas",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "activa": "FALSE",
+            "hora_fin_real": "={{ $('Process Resume Pause').item.json.hora_fin_real }}"
+          },
+          "matchingColumns": [
+            "unidad",
+            "activa"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "update-pause-inactive",
+      "name": "Mark Pause as Inactive",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1780,
+        900
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets ELAM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Process Resume Pause').item.json.chat_id }}",
+        "text": "=\u2705 *Pausa finalizada*\\n\\n\ud83d\ude9b Unidad: {{ $('Process Resume Pause').item.json.unidad }}\\n\ud83d\udc64 Operador: {{ $('Process Resume Pause').item.json.operador }}\\n\ud83d\udd50 Hora fin: {{ $('Process Resume Pause').item.json.hora_fin_formatted }}\\n\\n\u00a1Buen viaje! \ud83d\udee3\ufe0f",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "reply_markup": {
+            "value": {
+              "inline_keyboard": [
+                [
+                  {
+                    "text": "\u25c0\ufe0f Men\u00fa Principal",
+                    "callback_data": "start"
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      },
+      "id": "confirm-resume",
+      "name": "Confirm Resume",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2000,
+        900
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CONDUCTORES_CREDENTIAL_ID",
+          "name": "Telegram Bot Conductores"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Get User Info').item.json.chat_id }}",
+        "text": "\ud83d\udccd *Compartir Ubicaci\u00f3n*\\n\\nPor favor comparte tu ubicaci\u00f3n actual usando el bot\u00f3n de abajo.",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "reply_markup": {
+            "value": {
+              "keyboard": [
+                [
+                  {
+                    "text": "\ud83d\udccd Enviar mi ubicaci\u00f3n",
+                    "request_location": true
+                  }
+                ],
+                [
+                  {
+                    "text": "\u274c Cancelar"
+                  }
+                ]
+              ],
+              "one_time_keyboard": true,
+              "resize_keyboard": true
+            }
+          }
+        }
+      },
+      "id": "request-location",
+      "name": "Request Location",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1340,
+        1020
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CONDUCTORES_CREDENTIAL_ID",
+          "name": "Telegram Bot Conductores"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://elam-logistic.app.n8n.cloud/webhook/notificar-despacho",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "tipo_evento",
+              "value": "=incidente"
+            },
+            {
+              "name": "tipo_incidente",
+              "value": "={{ $json.tipo_incidente }}"
+            },
+            {
+              "name": "nombre_incidente",
+              "value": "={{ $json.nombre_incidente }}"
+            },
+            {
+              "name": "unidad",
+              "value": "={{ $json.unidad }}"
+            },
+            {
+              "name": "operador",
+              "value": "={{ $json.operador }}"
+            },
+            {
+              "name": "telefono",
+              "value": "={{ $json.telefono }}"
+            },
+            {
+              "name": "severidad",
+              "value": "={{ $json.severidad }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "name": "incident_id",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notify-dispatcher-incident",
+      "name": "Notify Dispatchers (Incident)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        560
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://elam-logistic.app.n8n.cloud/webhook/notificar-despacho",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "tipo_evento",
+              "value": "=emergencia"
+            },
+            {
+              "name": "unidad",
+              "value": "={{ $json.unidad }}"
+            },
+            {
+              "name": "operador",
+              "value": "={{ $json.operador }}"
+            },
+            {
+              "name": "telefono",
+              "value": "={{ $json.telefono }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $json.timestamp_inicio }}"
+            },
+            {
+              "name": "emergency_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "urgente",
+              "value": "=true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notify-dispatcher-emergency",
+      "name": "Notify Dispatchers (Emergency)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        780
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1KKTGm1dw3oPiEZJfp3Ydiz01ElMonrkWa7zMkLc_NHE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "reportes_conductores",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "telegram_user_id": "={{ $json.telegram_user_id }}",
+            "unidad": "={{ $json.unidad }}",
+            "operador": "={{ $json.operador }}",
+            "tipo_reporte": "=incidente_{{ $json.tipo_incidente }}",
+            "ubicacion_lat": "",
+            "ubicacion_lng": "",
+            "tiempo_estimado": "",
+            "status": "ACTIVO",
+            "notas": "={{ $json.nombre_incidente }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "log-incident-to-reportes",
+      "name": "Log Incident to reportes_conductores",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1560,
+        500
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets ELAM"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get User Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User Info": {
+      "main": [
+        [
+          {
+            "node": "Lookup User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup User": {
+      "main": [
+        [
+          {
+            "node": "User Authorized?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User Authorized?": {
+      "main": [
+        [
+          {
+            "node": "Route Handler",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Unauthorized Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Handler": {
+      "main": [
+        [
+          {
+            "node": "Show Main Menu",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show Pause Menu",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Pause Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show Incident Menu",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Incident Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Emergency",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show Help",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Resume Pause",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Request Location",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Pause Data": {
+      "main": [
+        [
+          {
+            "node": "Save to pausas_activas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to reportes_conductores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to pausas_activas": {
+      "main": [
+        [
+          {
+            "node": "Confirm Pause Registered",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to reportes_conductores": {
+      "main": [
+        [
+          {
+            "node": "Confirm Pause Registered",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Incident Data": {
+      "main": [
+        [
+          {
+            "node": "Save to incidentes",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Incident to reportes_conductores",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notify Dispatchers (Incident)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to incidentes": {
+      "main": [
+        [
+          {
+            "node": "Confirm Incident Reported",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Emergency": {
+      "main": [
+        [
+          {
+            "node": "Save to emergencias",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notify Dispatchers (Emergency)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to emergencias": {
+      "main": [
+        [
+          {
+            "node": "Confirm Emergency Activated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Resume Pause": {
+      "main": [
+        [
+          {
+            "node": "Find Active Pause",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Active Pause": {
+      "main": [
+        [
+          {
+            "node": "Mark Pause as Inactive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Pause as Inactive": {
+      "main": [
+        [
+          {
+            "node": "Confirm Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-12-01T12:00:00.000Z",
+      "updatedAt": "2025-12-01T12:00:00.000Z",
+      "id": "1",
+      "name": "ELAM"
+    },
+    {
+      "createdAt": "2025-12-01T12:00:00.000Z",
+      "updatedAt": "2025-12-01T12:00:00.000Z",
+      "id": "2",
+      "name": "Telegram"
+    },
+    {
+      "createdAt": "2025-12-01T12:00:00.000Z",
+      "updatedAt": "2025-12-01T12:00:00.000Z",
+      "id": "3",
+      "name": "Phase 2"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-12-01T12:00:00.000Z",
+  "versionId": "1"
+}
