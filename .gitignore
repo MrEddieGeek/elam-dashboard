@@ -6,7 +6,6 @@
 
 # Dependencies
 node_modules/
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
@@ -62,7 +61,12 @@ ENV/
 # Project-specific data files (may contain sensitive business data)
 csv/*.xlsx
 csv/*.kml
+csv/*.csv
 csv/context.txt
+
+# Templates with real data — keep only empty placeholders committed
+templates/reportes_conductores.csv
+templates/user_mapping.csv
 
 # Claude local settings (optional)
 .claude/settings.local.json

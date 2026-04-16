@@ -30,9 +30,9 @@ export function ExportButton({ data = [], filename = 'ELAM_Dashboard', className
       }));
 
       if (format === 'excel') {
-        exportToExcel(exportData, filename);
+        await exportToExcel(exportData, filename);
       } else if (format === 'csv') {
-        exportToCSV(exportData, filename);
+        await exportToCSV(exportData, filename);
       }
 
       // Pequeño delay para feedback visual
@@ -111,7 +111,7 @@ export function ExportButtonCompact({ data = [], filename = 'ELAM_Dashboard', cl
         'Última Actualización': item.ultimaActualizacion || ''
       }));
 
-      exportToExcel(exportData, filename);
+      await exportToExcel(exportData, filename);
       setTimeout(() => setIsExporting(false), 500);
     } catch (error) {
       console.error('Error al exportar:', error);
